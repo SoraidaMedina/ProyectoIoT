@@ -1,0 +1,111 @@
+.subir-imagen-container {
+    min-height: 100vh; /* Asegura que siempre ocupe la pantalla completa */
+}
+
+.subir-imagen-container {
+    text-align: center;
+    margin-top: 100px; /* Ajusta según la altura del Navbar */
+}
+
+.upload-container {
+    text-align: center;
+    margin-top: 100px; /* Ajusta según la altura del Navbar */
+    padding: 20px;
+    max-width: 900px;  /* Evita que el contenido se expanda demasiado */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Botón de subir imagen */
+.upload-btn {
+    margin-left: 10px;
+    padding: 10px 15px;
+    background-color: #f4a100; /* Amarillo */
+    color: black;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.upload-btn:hover {
+    background-color: #d88a00; /* Amarillo más oscuro */
+}
+
+/* Mensaje de éxito */
+.success-message {
+    color: green;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+/* 📌 TABLA PARA IMÁGENES SUBIDAS */
+.image-table-container {
+    margin-top: 20px;
+    overflow-x: auto;
+}
+/* 📌 Ajustamos la tabla para que las columnas sean proporcionales */
+.image-table td {
+    width: auto; /* Ajuste automático del tamaño de las celdas */
+    max-width: 300px; /* Máximo tamaño permitido */
+    overflow: hidden; /* Evita que el contenido sobresalga */
+    text-align: center;
+}
+
+/* 📌 Ajustamos el tamaño de la imagen */
+.image-table img {
+    width: 80px;  /* Tamaño fijo más pequeño */
+    max-height: 80px; /* Altura máxima */
+    border-radius: 5px;
+    object-fit: cover; /* Evita que la imagen se deforme */
+    display: block;
+    margin: 0 auto;
+}
+
+
+.image-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.image-table th, 
+.image-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+.image-table th {
+    background-color: #f4a100;
+    color: black;
+    font-weight: bold;
+}
+
+/* Tamaño de la imagen en la tabla */
+.image-table img {
+    width: 100px; /* Ajusta el tamaño de la miniatura */
+    height: auto;
+    border-radius: 5px;
+}
+
+/* Enlace de la imagen */
+.image-url {
+    color: blue;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+/* Botón de copiar */
+.copy-btn {
+    padding: 5px 8px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
