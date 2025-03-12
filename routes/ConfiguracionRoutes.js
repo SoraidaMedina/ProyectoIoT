@@ -1,43 +1,65 @@
+// routes/configuracionRoutes.js
 const express = require("express");
 const router = express.Router();
-const ConfiguracionDispensador = require("../models/ConfiguracionDispensador");
+const Configuracion = require("../models/Configuracion");
 
-router.get("/configuracion", async (req, res) => {
+// Obtener la configuración actual
+router.get("/", async (req, res) => {
   try {
-    const configuracion = await ConfiguracionDispensador.findOne().sort({ _id: -1 });
+    // Buscar la configuración existente (debería ser solo un documento)
+    let configuracion = await Configuracion.findOne();
+    
+    // Si no existe, crear una configuración inicial
     if (!configuracion) {
-      return res.status(404).json({ error: "No hay configuración guardada" });
+      configuracion = new Configuracion({
+        vision: "",
+        mision: "",
+        compromiso: ""
+      });
+      await configuracion.save();
     }
+    
     res.json(configuracion);
   } catch (error) {
-    res.status(500).json({ error: "Error al obtener la configuración" });
+    console.error("Error al obtener configuración:", error);
+    res.status(500).json({ mensaje: "Error al obtener la configuración" });
   }
 });
 
-router.put("/configuracion", async (req, res) => {
+// Actualizar la configuración
+router.put("/", async (req, res) => {
   try {
-    const { cantidadDispensar, horaDispensacion, nivelAlimento, modoVacaciones } = req.body;
-
-    let configuracion = await ConfiguracionDispensador.findOne();
+    const { vision, mision, compromiso } = req.body;
+    
+    // Buscar la configuración existente
+    let configuracion = await Configuracion.findOne();
+    
     if (configuracion) {
-      configuracion.cantidadDispensar = cantidadDispensar;
-      configuracion.horaDispensacion = horaDispensacion;
-      configuracion.nivelAlimento = nivelAlimento;
-      configuracion.modoVacaciones = modoVacaciones;
+      // Actualizar si existe
+      configuracion.vision = vision;
+      configuracion.mision = mision;
+      configuracion.compromiso = compromiso;
+      configuracion.fechaActualizacion = new Date();
+      
       await configuracion.save();
     } else {
-      configuracion = await ConfiguracionDispensador.create({
-        cantidadDispensar,
-        horaDispensacion,
-        nivelAlimento,
-        modoVacaciones,
+      // Crear nueva configuración si no existe
+      configuracion = new Configuracion({
+        vision,
+        mision,
+        compromiso
       });
+      
+      await configuracion.save();
     }
-
-    res.json({ mensaje: "✅ Configuración actualizada correctamente", configuracion });
+    
+    res.json({ 
+      mensaje: "Configuración actualizada correctamente",
+      configuracion 
+    });
   } catch (error) {
-    console.error("❌ Error al actualizar configuración:", error);
-    res.status(500).json({ error: "❌ Error al actualizar la configuración" });
+    console.error("Error al actualizar configuración:", error);
+    res.status(500).json({ mensaje: "Error al actualizar la configuración" });
   }
 });
 

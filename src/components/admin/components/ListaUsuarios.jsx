@@ -9,11 +9,11 @@ const ListaUsuarios = () => {
   useEffect(() => {
     const obtenerUsuarios = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/usuarios");
+        const res = await fetch("http://localhost:5000/api/admin/usuarios/lista");
         if (!res.ok) {
           throw new Error("Error al obtener la lista de usuarios");
         }
-
+  
         const data = await res.json();
         setUsuarios(data);
       } catch (err) {
@@ -22,7 +22,7 @@ const ListaUsuarios = () => {
         setLoading(false);
       }
     };
-
+  
     obtenerUsuarios();
   }, []);
 

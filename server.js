@@ -25,6 +25,25 @@ const MascotaRoutes = require("./routes/MascotaRoutes");
 const ConfiguracionRoutes = require("./routes/ConfiguracionRoutes");
 const DispensadorRoutes = require("./routes/dispensadorRoutes"); // ✅ Importar la nueva ruta
 
+//Importar Admin
+const iotRoutes = require("./routes/iotRoutes");
+const adminUsuariosRoutes = require("./routes/adminUsuariosRoutes");
+const configuracionRoutes = require("./routes/ConfiguracionRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const historialRoutes = require("./routes/historialRoutes");
+const dispositivosRoutes = require("./routes/dispositivosRoutes");
+const personalizacionRoutes = require("./routes/personalizacionRoutes");
+
+//rutas administrador
+app.use("/api/iot", iotRoutes);
+app.use("/api/admin/usuarios", adminUsuariosRoutes);
+app.use("/api/configuracion", configuracionRoutes);
+pp.use("/api", dashboardRoutes);
+app.use("/api/historial", historialRoutes);
+app.use("/api/dispositivos", dispositivosRoutes);
+app.use("/api/personalizacion", personalizacionRoutes);
+
+
 // Usar rutas existentes
 app.use("/api/tienda", tiendaRoutes);
 app.use("/api/slider", sliderRoutes);
