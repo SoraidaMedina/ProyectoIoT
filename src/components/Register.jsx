@@ -16,19 +16,19 @@ function Register() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-  
+
     if (password !== confirmPassword) {
       setError("❌ Las contraseñas no coinciden.");
       return;
     }
-  
+
     try {
       const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "PUT",
+        method: "POST", // Cambiado a POST
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, apellidoPaterno, apellidoMaterno, email, password, direccion }),
       });
-  
+
       const data = await response.json();
       if (response.ok) {
         setSuccess("✅ Registro exitoso. Redirigiendo...");

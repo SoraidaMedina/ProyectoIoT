@@ -1,14 +1,13 @@
 import React, { useState } from "react";
-import "font-awesome/css/font-awesome.min.css"; // Asegúrate de importar FontAwesome si usas npm
+import { useNavigate } from "react-router-dom";
+import "font-awesome/css/font-awesome.min.css";
 
-// Componente Footer
 const Footer = () => {
-  // Estados
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
-  const [showMenu, setShowMenu] = useState(false); // Estado para controlar la visibilidad del menú
+  const [showMenu, setShowMenu] = useState(false);
 
-  // Manejadores de eventos
   const handleOptionClick = (option) => {
     setSelectedOption(option);
     setShowModal(true);
@@ -16,6 +15,10 @@ const Footer = () => {
 
   const closeModal = () => {
     setShowModal(false);
+  };
+
+  const handleNavigation = (path) => {
+    navigate(path);
   };
 
   return (
@@ -89,17 +92,48 @@ const Footer = () => {
             </div>
           </div>
 
+          {/* Nueva Sección de Soporte */}
+          <div style={styles.sectionCenter}>
+            <h5 style={styles.sectionTitle}>
+              <i className="fa fa-headset" style={styles.icon}></i> Soporte
+            </h5>
+            <div style={styles.horizontalList}>
+              <a
+                href="#"
+                style={styles.link}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigation("/contacto");
+                }}
+              >
+                <i className="fa fa-phone-square" style={styles.icon}></i>
+                Contacto
+              </a>
+              <a
+                href="#"
+                style={styles.link}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigation("/ayuda");
+                }}
+              >
+                <i className="fa fa-life-ring" style={styles.icon}></i>
+                Centro de Ayuda
+              </a>
+            </div>
+          </div>
+
           {/* Sección de Misión y Visión */}
           <div
             style={styles.sectionRight}
-            onMouseEnter={() => setShowMenu(true)} // Mostrar menú al pasar el puntero
-            onMouseLeave={() => setShowMenu(false)} // Ocultar menú al quitar el puntero
+            onMouseEnter={() => setShowMenu(true)}
+            onMouseLeave={() => setShowMenu(false)}
           >
             <h5 style={styles.sectionTitle}>
               <i className="fa fa-lightbulb" style={styles.icon}></i> Misión y Visión
             </h5>
             <div style={styles.menuIconContainer}>
-              <i className="fa fa-bullseye" style={styles.menuIcon}></i> {/* Ícono de objetivo */}
+              <i className="fa fa-bullseye" style={styles.menuIcon}></i>
             </div>
             {showMenu && (
               <ul style={styles.menu}>
@@ -258,7 +292,7 @@ const styles = {
   row: {
     display: "flex",
     flexWrap: "wrap",
-    justifyContent: "space-between", // Espacio entre los elementos
+    justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "15px",
   },
@@ -266,28 +300,28 @@ const styles = {
     flex: "1",
     minWidth: "200px",
     margin: "10px",
-    textAlign: "center", // Centrado para todo el contenido de la sección
+    textAlign: "center",
   },
   sectionCenter: {
     flex: "1",
     minWidth: "200px",
     margin: "10px",
-    textAlign: "center", // Centrado para redes sociales
+    textAlign: "center",
   },
   sectionRight: {
     flex: "1",
     minWidth: "200px",
     margin: "10px",
-    textAlign: "center", // Centrado para Misión y Visión
-    position: "relative", // Asegura que el menú desplegable se posicione correctamente
+    textAlign: "center",
+    position: "relative",
   },
   sectionTitle: {
     fontSize: "1.25rem",
     marginBottom: "10px",
     color: "#f1c40f",
     display: "flex",
-    justifyContent: "center", // Aseguramos que el texto y el icono estén centrados
-    gap: "5px", // Reducir el espacio entre el ícono y el texto
+    justifyContent: "center",
+    gap: "5px",
   },
   horizontalList: {
     display: "flex",
@@ -301,7 +335,7 @@ const styles = {
     transition: "color 0.3s ease",
     display: "flex",
     alignItems: "center",
-    gap: "5px", // Reducir el espacio entre el ícono y el texto
+    gap: "5px",
   },
   icon: {
     fontSize: "24px",
@@ -315,11 +349,11 @@ const styles = {
     backgroundColor: "#34495e",
     borderRadius: "10px",
     position: "absolute",
-    bottom: "100%",  /* Hace que el menú se despliegue hacia abajo */
+    bottom: "100%",
     left: 0,
     width: "100%",
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-    zIndex: 1000, // Asegura que el menú esté por encima de otros elementos
+    zIndex: 1000,
   },
   menuItem: {
     padding: "10px",
@@ -341,7 +375,7 @@ const styles = {
   },
   menuIconContainer: {
     marginTop: "10px",
-    textAlign: "center", /* Centrar el ícono debajo del texto */
+    textAlign: "center",
   },
   arrowIcon: {
     position: "absolute",
@@ -368,8 +402,8 @@ const styles = {
     borderRadius: "10px",
     maxWidth: "500px",
     width: "90%",
-    maxHeight: "80vh", // Altura máxima del modal
-    overflowY: "auto", // Hacer el contenido desplazable
+    maxHeight: "80vh",
+    overflowY: "auto",
     textAlign: "center",
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
   },

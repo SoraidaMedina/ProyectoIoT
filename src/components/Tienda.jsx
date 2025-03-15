@@ -1,28 +1,48 @@
-import React, { useEffect, useState } from "react";
-import { FaInfoCircle, FaShoppingCart, FaStar, FaTruck, FaHeart, FaSearch, FaFilter } from "react-icons/fa";
-import { Spinner } from "react-bootstrap";
+import React, { useEffect, useState, useRef } from "react";
+import { FaInfoCircle, FaTruck, FaStar, FaTimes, FaArrowLeft, FaArrowRight, FaSearch, FaFilter, FaShoppingCart, FaTrash, FaCheckCircle } from "react-icons/fa";
 
 const Tienda = () => {
   const [productos, setProductos] = useState([]);
+  const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [favoritos, setFavoritos] = useState([]);
-  const [filtroCategoria, setFiltroCategoria] = useState("todos");
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [productosPorPagina] = useState(8); // 8 productos por página (4 arriba y 4 abajo)
   const [busqueda, setBusqueda] = useState("");
-  const [productosMostrados, setProductosMostrados] = useState([]);
-  const [ordenarPor, setOrdenarPor] = useState("relevancia");
-  const [categoriasUnicas, setCategoriasUnicas] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("todas");
+  // Estados para el carrito
+  const [carrito, setCarrito] = useState([]);
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const [checkoutAbierto, setCheckoutAbierto] = useState(false);
+  const [notificacion, setNotificacion] = useState({ visible: false, mensaje: "", tipo: "" });
+  const [procesandoPedido, setProcesandoPedido] = useState(false);
+  const [datosEnvio, setDatosEnvio] = useState({
+    nombre: "",
+    email: "",
+    telefono: "",
+    direccion: "",
+    metodoEnvio: "normal",
+    metodoPago: "contraentrega"
+  });
+  
+  // Referencias para cerrar modales al hacer clic fuera
+  const carritoRef = useRef(null);
+  const checkoutRef = useRef(null);
 
   // Obtener los productos desde la API
   useEffect(() => {
     fetch("http://localhost:5000/api/tienda")
       .then((response) => response.json())
       .then((data) => {
+        console.log("📌 Productos recibidos:", data);
         setProductos(data);
-        setProductosMostrados(data);
+        setProductosFiltrados(data);
         
-        // Extraer categorías únicas
-        const categorias = [...new Set(data.map(producto => producto.categoria || "Sin categoría"))];
-        setCategoriasUnicas(categorias);
+        // Extraer todas las categorías únicas
+        const todasCategorias = [...new Set(data.map(producto => producto.categoria))];
+        setCategorias(todasCategorias);
         
         setIsLoading(false);
       })
@@ -31,273 +51,755 @@ const Tienda = () => {
         setIsLoading(false);
       });
   }, []);
-  
-  // Filtrar productos basado en categoría, búsqueda y ordenamiento
-  useEffect(() => {
-    if (!productos.length) return;
-    
-    let productosFiltrados = [...productos];
-    
-    // Filtro por categoría
-    if (filtroCategoria !== "todos") {
-      productosFiltrados = productosFiltrados.filter(
-        producto => (producto.categoria || "Sin categoría") === filtroCategoria
-      );
-    }
-    
-    // Filtro por búsqueda
-    if (busqueda.trim()) {
-      const searchTerm = busqueda.toLowerCase();
-      productosFiltrados = productosFiltrados.filter(
-        producto => 
-          producto.nombre.toLowerCase().includes(searchTerm) ||
-          producto.descripcion.toLowerCase().includes(searchTerm)
-      );
-    }
-    
-    // Ordenar productos
-    switch(ordenarPor) {
-      case "precioAsc":
-        productosFiltrados.sort((a, b) => a.precio - b.precio);
-        break;
-      case "precioDesc":
-        productosFiltrados.sort((a, b) => b.precio - a.precio);
-        break;
-      case "nombreAsc":
-        productosFiltrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
-        break;
-      case "popularidad":
-        productosFiltrados.sort((a, b) => (b.masVendido ? 1 : 0) - (a.masVendido ? 1 : 0));
-        break;
-      case "oferta":
-        productosFiltrados.sort((a, b) => (b.oferta ? 1 : 0) - (a.oferta ? 1 : 0));
-        break;
-      default:
-        // Por defecto ordenar por relevancia (sin cambios)
-        break;
-    }
-    
-    setProductosMostrados(productosFiltrados);
-  }, [productos, filtroCategoria, busqueda, ordenarPor]);
 
-  // Manejar favoritos
-  const toggleFavorito = (id) => {
-    setFavoritos(prevFavoritos => 
-      prevFavoritos.includes(id)
-        ? prevFavoritos.filter(item => item !== id)
-        : [...prevFavoritos, id]
-    );
+  // Función para filtrar productos basados en la búsqueda y categoría
+  useEffect(() => {
+    let resultado = productos;
+    
+    // Filtrar por término de búsqueda
+    if (busqueda.trim() !== "") {
+      resultado = resultado.filter(producto => 
+        producto.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+        producto.descripcion.toLowerCase().includes(busqueda.toLowerCase())
+      );
+    }
+    
+    // Filtrar por categoría
+    if (categoriaSeleccionada !== "todas") {
+      resultado = resultado.filter(producto => producto.categoria === categoriaSeleccionada);
+    }
+    
+    setProductosFiltrados(resultado);
+    setPaginaActual(1); // Volver a la primera página al cambiar filtros
+  }, [busqueda, categoriaSeleccionada, productos]);
+
+  // Cerrar modales al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (carritoAbierto && carritoRef.current && !carritoRef.current.contains(event.target)) {
+        setCarritoAbierto(false);
+      }
+      
+      if (checkoutAbierto && checkoutRef.current && !checkoutRef.current.contains(event.target)) {
+        setCheckoutAbierto(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [carritoAbierto, checkoutAbierto]);
+
+  // Mostrar notificación con temporizador para ocultarla
+  const mostrarNotificacion = (mensaje, tipo = "success") => {
+    setNotificacion({ visible: true, mensaje, tipo });
+    setTimeout(() => {
+      setNotificacion({ visible: false, mensaje: "", tipo: "" });
+    }, 3000);
+  };
+
+  // Función para manejar la búsqueda
+  const manejarBusqueda = (e) => {
+    setBusqueda(e.target.value);
+  };
+
+  // Función para manejar cambio de categoría
+  const manejarCategoria = (e) => {
+    setCategoriaSeleccionada(e.target.value);
+  };
+
+  // Función para abrir el modal con los detalles del producto
+  const abrirModal = (producto) => {
+    setProductoSeleccionado(producto);
+    setModalAbierto(true);
+  };
+
+  // Función para cerrar el modal
+  const cerrarModal = () => {
+    setModalAbierto(false);
+    setProductoSeleccionado(null);
+  };
+
+  // Funciones del carrito
+  const toggleCarrito = () => {
+    setCarritoAbierto(!carritoAbierto);
+    setCheckoutAbierto(false); // Cerrar checkout si está abierto
+  };
+
+  // Función para añadir un producto al carrito
+  const agregarAlCarrito = (producto, cantidad = 1) => {
+    const productoEnCarrito = carrito.find(item => item._id === producto._id);
+    
+    if (productoEnCarrito) {
+      // Si ya existe, aumenta la cantidad
+      setCarrito(
+        carrito.map(item => 
+          item._id === producto._id 
+            ? { ...item, cantidad: item.cantidad + cantidad } 
+            : item
+        )
+      );
+    } else {
+      // Si no existe, añádelo con cantidad 1
+      setCarrito([...carrito, { ...producto, cantidad }]);
+    }
+    
+    // Muestra notificación en lugar de alerta
+    mostrarNotificacion(`${producto.nombre} añadido al carrito`);
+    
+    // Abre automáticamente el carrito temporalmente
+    setCarritoAbierto(true);
+    
+    // Opcional: cierra automáticamente el carrito después de unos segundos
+    setTimeout(() => {
+      setCarritoAbierto(false);
+    }, 3000);
+  };
+
+  // Función para eliminar un producto del carrito
+  const eliminarDelCarrito = (id) => {
+    setCarrito(carrito.filter(item => item._id !== id));
+  };
+
+  // Función para modificar la cantidad de un producto
+  const cambiarCantidad = (id, nuevaCantidad) => {
+    if (nuevaCantidad <= 0) {
+      eliminarDelCarrito(id);
+    } else {
+      setCarrito(
+        carrito.map(item => 
+          item._id === id 
+            ? { ...item, cantidad: nuevaCantidad } 
+            : item
+        )
+      );
+    }
+  };
+
+  // Función para calcular el total del carrito
+  const calcularTotal = () => {
+    let total = carrito.reduce((total, item) => {
+      return total + (item.precio * item.cantidad);
+    }, 0);
+    
+    // Añadir costo de envío si es express
+    if (datosEnvio.metodoEnvio === "express") {
+      total += 5; // 5 EUR adicionales por envío express
+    }
+    
+    return total.toFixed(2);
+  };
+
+  // Función para abrir el checkout
+  const abrirCheckout = () => {
+    if (carrito.length === 0) {
+      mostrarNotificacion("Tu carrito está vacío", "error");
+      return;
+    }
+    
+    setCheckoutAbierto(true);
+    setCarritoAbierto(false);
+  };
+
+  // Manejar cambios en el formulario de checkout
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setDatosEnvio({
+      ...datosEnvio,
+      [name]: value
+    });
+  };
+
+  // Procesar la orden - Función actualizada para enviar datos al backend
+  const procesarOrden = async (e) => {
+    e.preventDefault();
+    
+    if (carrito.length === 0) {
+      mostrarNotificacion("Tu carrito está vacío", "error");
+      return;
+    }
+    
+    try {
+      // Indicar que estamos procesando el pedido
+      setProcesandoPedido(true);
+      
+      // Preparar los datos del pedido
+      const pedidoData = {
+        productos: carrito.map(item => ({
+          productoId: item._id,
+          nombre: item.nombre,
+          precio: item.precio,
+          cantidad: item.cantidad,
+          imagenUrl: item.imagenUrl || `/uploads/${item.imagen}`
+        })),
+        datosCliente: datosEnvio,
+      };
+      
+      // Enviar al backend
+      const response = await fetch('http://localhost:5000/api/pedidos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pedidoData),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Mostrar notificación de éxito
+        mostrarNotificacion(`¡Pedido realizado con éxito! Referencia: ${data.pedido.numeroReferencia}`);
+        
+        // Vaciar carrito
+        setCarrito([]);
+        
+        // Cerrar checkout y resetear datos
+        setCheckoutAbierto(false);
+        setDatosEnvio({
+          nombre: "",
+          email: "",
+          telefono: "",
+          direccion: "",
+          metodoEnvio: "normal",
+          metodoPago: "contraentrega"
+        });
+        
+        // Guardar referencia del pedido
+        localStorage.setItem('ultimoPedido', data.pedido._id);
+        
+      // Redirigir a página de confirmación
+         window.location.href = `/confirmacion/${data.pedido._id}`;
+      } else {
+        throw new Error(data.mensaje || 'Error al procesar el pedido');
+      }
+    } catch (error) {
+      console.error("Error al procesar el pedido:", error);
+      mostrarNotificacion("Error al procesar el pedido: " + error.message, "error");
+    } finally {
+      setProcesandoPedido(false);
+    }
+  };
+
+  // Calcular los productos que se deben mostrar en la página actual
+  const indiceUltimoProducto = paginaActual * productosPorPagina;
+  const indicePrimerProducto = indiceUltimoProducto - productosPorPagina;
+  const productosActuales = productosFiltrados.slice(indicePrimerProducto, indiceUltimoProducto);
+
+  // Cambiar a la página siguiente
+  const paginaSiguiente = () => {
+    if (paginaActual < Math.ceil(productosFiltrados.length / productosPorPagina)) {
+      setPaginaActual(paginaActual + 1);
+    }
+  };
+
+  // Cambiar a la página anterior
+  const paginaAnterior = () => {
+    if (paginaActual > 1) {
+      setPaginaActual(paginaActual - 1);
+    }
   };
 
   if (isLoading) {
     return (
-      <div style={styles.loaderContainer}>
-        <Spinner animation="border" role="status" style={styles.spinner}>
-          <span className="visually-hidden">Cargando...</span>
-        </Spinner>
-        <p style={styles.loaderText}>Cargando productos...</p>
+      <div style={styles.body}>
+        <p>Cargando productos...</p>
       </div>
     );
   }
 
   if (!productos || productos.length === 0) {
-    return (
-      <div style={styles.mensajeVacioContainer}>
-        <div style={styles.mensajeVacio}>
-          <FaShoppingCart style={styles.iconoVacio} />
-          <h3>No hay productos disponibles en este momento</h3>
-          <p>Lo sentimos, estamos trabajando para añadir nuevos productos pronto.</p>
-        </div>
-      </div>
-    );
+    return <p>No hay productos disponibles.</p>;
   }
 
   return (
-    <div style={styles.tiendaContainer}>
-      <div style={styles.headerTienda}>
-        <h2 style={styles.tituloTienda}>🐾 Nuestra Tienda Pet-Friendly 🐾</h2>
-        <p style={styles.subtituloTienda}>Todo lo que tu mascota necesita, con la calidad que merece</p>
-      </div>
-
-      {/* Filtros y búsqueda */}
-      <div style={styles.filtrosContainer}>
-        <div style={styles.searchBox}>
-          <FaSearch style={styles.iconoBusqueda} />
-          <input 
-            type="text" 
-            placeholder="Buscar productos..." 
-            style={styles.inputBusqueda}
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+    <div style={styles.body}>
+      {/* Notificación flotante */}
+      {notificacion.visible && (
+        <div style={{
+          ...styles.notificacion,
+          backgroundColor: notificacion.tipo === "error" ? "#ff6b6b" : 
+                          notificacion.tipo === "info" ? "#3498db" : "#4CAF50"
+        }}>
+          {notificacion.tipo === "success" && <FaCheckCircle style={{ marginRight: "8px" }} />}
+          {notificacion.mensaje}
+        </div>
+      )}
+      
+      <div style={styles.tiendaContainer}>
+        {/* Header con título y carrito */}
+        <div style={styles.barraNavegacion}>
+          <h2 style={styles.tituloTienda}>🐾 Nuestra Tienda 🐾</h2>
+          
+          {/* Icono del carrito con contador */}
+          <div onClick={toggleCarrito} style={styles.iconoCarrito}>
+            <FaShoppingCart style={styles.carrito} />
+            {carrito.length > 0 && (
+              <span style={styles.contadorCarrito}>
+                {carrito.reduce((total, item) => total + item.cantidad, 0)}
+              </span>
+            )}
+          </div>
         </div>
         
-        <div style={styles.filtrosCategorias}>
-          <div style={styles.filtroHeader}>
-            <FaFilter />
-            <span style={styles.filtroTitulo}>Filtrar por:</span>
+        {/* Barra de búsqueda y filtros */}
+        <div style={styles.filtrosContainer}>
+          <div style={styles.barraBusqueda}>
+            <FaSearch style={styles.iconoBusqueda} />
+            <input
+              type="text"
+              placeholder="Buscar productos..."
+              value={busqueda}
+              onChange={manejarBusqueda}
+              style={styles.inputBusqueda}
+            />
           </div>
           
-          <select 
-            style={styles.selectFiltro}
-            value={filtroCategoria}
-            onChange={(e) => setFiltroCategoria(e.target.value)}
-          >
-            <option value="todos">Todas las categorías</option>
-            {categoriasUnicas.map(categoria => (
-              <option key={categoria} value={categoria}>{categoria}</option>
-            ))}
-          </select>
-          
-          <select 
-            style={styles.selectFiltro}
-            value={ordenarPor}
-            onChange={(e) => setOrdenarPor(e.target.value)}
-          >
-            <option value="relevancia">Más relevantes</option>
-            <option value="precioAsc">Precio: menor a mayor</option>
-            <option value="precioDesc">Precio: mayor a menor</option>
-            <option value="nombreAsc">Nombre A-Z</option>
-            <option value="popularidad">Más populares</option>
-            <option value="oferta">Ofertas</option>
-          </select>
+          <div style={styles.filtroCategoria}>
+            <FaFilter style={styles.iconoFiltro} />
+            <select 
+              value={categoriaSeleccionada} 
+              onChange={manejarCategoria}
+              style={styles.selectCategoria}
+            >
+              <option value="todas">Todas las categorías</option>
+              {categorias.map((categoria, index) => (
+                <option key={index} value={categoria}>
+                  {categoria}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
-      
-      {/* Contador de resultados */}
-      <div style={styles.resultadosCounter}>
-        <span>Mostrando {productosMostrados.length} de {productos.length} productos</span>
-      </div>
+        
+        {/* Mostrar resultados de búsqueda */}
+        <div style={styles.resultadosBusqueda}>
+          {productosFiltrados.length === 0 ? (
+            <p style={styles.noResultados}>No se encontraron productos</p>
+          ) : (
+            <p>Mostrando {productosFiltrados.length} productos</p>
+          )}
+        </div>
 
-      {/* Grid de productos */}
-      <div style={styles.productosGrid}>
-        {productosMostrados.length === 0 ? (
-          <div style={styles.noResultados}>
-            <p>No se encontraron productos que coincidan con tu búsqueda.</p>
-            <button 
-              style={styles.btnReiniciarBusqueda}
-              onClick={() => {
-                setBusqueda("");
-                setFiltroCategoria("todos");
-                setOrdenarPor("relevancia");
-              }}
-            >
-              Reiniciar búsqueda
-            </button>
-          </div>
-        ) : (
-          productosMostrados.map((producto) => (
-            <div 
-              style={{
-                ...styles.productoCard,
-                transform: favoritos.includes(producto._id) ? 'scale(1.02)' : 'scale(1)'
-              }} 
-              key={producto._id}
-            >
-              <div style={styles.etiquetasContainer}>
-                {/* Botón de favorito */}
-                <button 
-                  style={{
-                    ...styles.btnFavorito,
-                    backgroundColor: favoritos.includes(producto._id) ? 'rgba(255, 0, 80, 0.8)' : 'rgba(0, 0, 0, 0.5)'
-                  }}
-                  onClick={() => toggleFavorito(producto._id)}
-                >
-                  <FaHeart style={styles.iconoFavorito} />
-                </button>
+        {/* Grid de productos (4 arriba y 4 abajo) */}
+        <div style={styles.productosGrid}>
+          {productosActuales.map((producto) => (
+            <div style={styles.productoCard} key={producto._id}>
+              {/* Etiqueta de Oferta */}
+              {producto.oferta && <span style={styles.ofertaLabel}>OFERTA</span>}
 
-                {/* Etiquetas */}
-                <div style={styles.etiquetas}>
-                  {producto.oferta && <span style={styles.ofertaLabel}>OFERTA</span>}
-                  {producto.masVendido && <span style={styles.masVendido}>🔥 Más Vendido</span>}
-                </div>
-              </div>
+              {/* Etiqueta "Más Vendido" */}
+              {producto.masVendido && <span style={styles.masVendido}>🔥 Más Vendido</span>}
+              
+              {/* Etiqueta de Categoría */}
+              {producto.categoria && <span style={styles.categoriaLabel}>{producto.categoria}</span>}
 
-              <div style={styles.imagenContainer}>
-                <img
-                  src={`http://localhost:5000${producto.imagenUrl.startsWith('/') ? producto.imagenUrl : '/' + producto.imagenUrl}`}
-                  alt={producto.nombre}
-                  style={styles.productoImagen}
-                  onError={(e) => { e.target.src = "http://localhost:5000/uploads/default.jpg"; }}
-                />
-                {producto.stock <= 5 && producto.stock > 0 && (
-                  <div style={styles.stockBajo}>¡Quedan solo {producto.stock}!</div>
-                )}
-                {producto.stock === 0 && (
-                  <div style={styles.sinStock}>Agotado</div>
-                )}
-              </div>
+              {/* Imagen del producto */}
+              <img
+                src={`http://localhost:5000${producto.imagenUrl?.startsWith('/') ? producto.imagenUrl : '/' + producto.imagenUrl || `/uploads/${producto.imagen}`}`}
+                alt={producto.nombre}
+                style={styles.productoImagen}
+                onLoad={() => console.log("Imagen cargada")}
+                onError={(e) => { e.target.src = "http://localhost:5000/uploads/default.jpg"; }}
+              />
 
+              {/* Información del producto */}
               <div style={styles.productoInfo}>
-                <span style={styles.categoriaTag}>{producto.categoria || "General"}</span>
                 <h5 style={styles.productoTitulo}>{producto.nombre}</h5>
                 <p style={styles.productoDescripcion}>{producto.descripcion}</p>
 
+                {/* Precio */}
+                <p style={styles.productoPrecio}>
+                  {producto.precio} EUR
+                </p>
+
+                {/* Estrellas de calificación */}
                 {producto.estrellas && (
                   <div style={styles.estrellas}>
-                    {[...Array(5)].map((_, i) => (
-                      <FaStar 
-                        key={i} 
-                        style={{
-                          ...styles.estrella,
-                          color: i < producto.estrellas ? "#ffcc00" : "#444"
-                        }} 
-                      />
+                    {[...Array(producto.estrellas)].map((_, i) => (
+                      <FaStar key={i} style={styles.estrella} />
                     ))}
-                    {producto.totalReviews && (
-                      <span style={styles.reviewsCount}>({producto.totalReviews})</span>
-                    )}
                   </div>
                 )}
 
-                {producto.envioGratis && 
-                  <p style={styles.envioGratis}>
-                    <FaTruck style={styles.iconoEnvio} /> Envío Gratis
-                  </p>
-                }
-
-                <div style={styles.precioContainer}>
-                  {producto.precioAnterior && (
-                    <span style={styles.precioAnterior}>{producto.precioAnterior} EUR</span>
-                  )}
-                  <h6 style={styles.precio}>
-                    {producto.precio} EUR
-                    {producto.precioAnterior && (
-                      <span style={styles.descuentoPorcentaje}>
-                        {Math.round((1 - producto.precio / producto.precioAnterior) * 100)}% OFF
-                      </span>
-                    )}
-                  </h6>
-                </div>
+                {/* Envío gratis */}
+                {producto.envioGratis && <p style={styles.envioGratis}><FaTruck /> Envío Gratis</p>}
               </div>
 
+              {/* Botones */}
               <div style={styles.botones}>
-                <button style={styles.btnVer}>
-                  <FaInfoCircle style={styles.iconoBoton} /> Ver Detalles
+                <button style={styles.btnVer} onClick={() => abrirModal(producto)}>
+                  <FaInfoCircle style={{ marginRight: "5px" }} /> Ver Detalles
                 </button>
+                
+                {/* Botón para añadir al carrito */}
                 <button 
-                  style={{
-                    ...styles.btnComprar,
-                    opacity: producto.stock === 0 ? 0.5 : 1,
-                    cursor: producto.stock === 0 ? 'not-allowed' : 'pointer'
+                  style={styles.btnAgregar} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    agregarAlCarrito(producto);
                   }}
-                  disabled={producto.stock === 0}
                 >
-                  <FaShoppingCart style={styles.iconoBoton} />
-                  {producto.stock === 0 ? 'Agotado' : 'Comprar'}
+                  <FaShoppingCart style={{ marginRight: "5px" }} /> Añadir al Carrito
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
-      
-      {/* Paginación (opcional, simplificada) */}
-      {productosMostrados.length > 0 && (
+          ))}
+        </div>
+
+        {/* Controles de paginación */}
         <div style={styles.paginacion}>
-          <button style={styles.btnPaginacion} disabled>Anterior</button>
-          <span style={styles.paginaActual}>Página 1</span>
-          <button style={styles.btnPaginacion} disabled={productosMostrados.length < 12}>Siguiente</button>
+          <button
+            onClick={paginaAnterior}
+            disabled={paginaActual === 1}
+            style={{
+              ...styles.botonPaginacion,
+              opacity: paginaActual === 1 ? 0.5 : 1
+            }}
+          >
+            <FaArrowLeft />
+          </button>
+          <span style={styles.paginaActual}>
+            Página {paginaActual} de {Math.ceil(productosFiltrados.length / productosPorPagina)}
+          </span>
+          <button
+            onClick={paginaSiguiente}
+            disabled={paginaActual === Math.ceil(productosFiltrados.length / productosPorPagina)}
+            style={{
+              ...styles.botonPaginacion,
+              opacity: paginaActual === Math.ceil(productosFiltrados.length / productosPorPagina) ? 0.5 : 1
+            }}
+          >
+            <FaArrowRight />
+          </button>
+        </div>
+      </div>
+
+      {/* Modal para mostrar detalles del producto */}
+      {modalAbierto && productoSeleccionado && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            {/* Botón para cerrar el modal */}
+            <button style={styles.cerrarModal} onClick={cerrarModal}>
+              <FaTimes />
+            </button>
+
+            {/* Título del producto */}
+            <h2 style={styles.modalTitulo}>{productoSeleccionado.nombre}</h2>
+
+            {/* Imagen del producto (ajustada para verse completa) */}
+            <img
+              src={`http://localhost:5000${productoSeleccionado.imagenUrl?.startsWith('/') ? productoSeleccionado.imagenUrl : '/' + productoSeleccionado.imagenUrl || `/uploads/${productoSeleccionado.imagen}`}`}
+              alt={productoSeleccionado.nombre}
+              style={styles.modalImagen}
+            />
+
+            {/* Categoría */}
+            {productoSeleccionado.categoria && (
+              <p style={styles.modalCategoria}>
+                <strong>Categoría:</strong> {productoSeleccionado.categoria}
+              </p>
+            )}
+
+            {/* Descripción del producto */}
+            <p style={styles.modalDescripcion}>{productoSeleccionado.descripcion}</p>
+
+            {/* Precio (solo se muestra en el modal) */}
+            <p style={styles.modalPrecio}>
+              <strong>Precio:</strong> {productoSeleccionado.precio} EUR
+            </p>
+
+            {/* Envío gratis */}
+            {productoSeleccionado.envioGratis && (
+              <p style={styles.modalEnvioGratis}>
+                <FaTruck /> Envío Gratis
+              </p>
+            )}
+
+            {/* Estrellas de calificación */}
+            {productoSeleccionado.estrellas && (
+              <div style={styles.modalEstrellas}>
+                {[...Array(productoSeleccionado.estrellas)].map((_, i) => (
+                  <FaStar key={i} style={styles.estrella} />
+                ))}
+              </div>
+            )}
+
+            {/* Botón para añadir al carrito desde el modal */}
+            <button 
+              style={styles.btnAgregar}
+              onClick={() => {
+                agregarAlCarrito(productoSeleccionado);
+                cerrarModal();
+              }}
+            >
+              <FaShoppingCart style={{ marginRight: "5px" }} /> Añadir al Carrito
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Carrito de compras (se muestra con efecto slide-in desde la derecha) */}
+      {carritoAbierto && (
+        <div style={styles.carritoOverlay}>
+          <div ref={carritoRef} style={styles.carritoPanel}>
+            <div style={styles.carritoHeader}>
+              <h2 style={styles.carritoTitulo}>Tu Carrito</h2>
+              <button style={styles.cerrarCarrito} onClick={() => setCarritoAbierto(false)}>
+                <FaTimes />
+              </button>
+            </div>
+
+            {carrito.length === 0 ? (
+              <div style={styles.carritoVacio}>
+                <p>Tu carrito está vacío</p>
+                <p style={styles.carritoVacioSubtexto}>Añade productos para comenzar</p>
+              </div>
+            ) : (
+              <>
+                <div style={styles.carritoItems}>
+                  {carrito.map((item) => (
+                    <div key={item._id} style={styles.carritoItem}>
+                      <img 
+                        src={`http://localhost:5000${item.imagenUrl?.startsWith('/') ? item.imagenUrl : '/' + item.imagenUrl || `/uploads/${item.imagen}`}`}
+                        alt={item.nombre}
+                        style={styles.carritoItemImagen}
+                      />
+                      
+                      <div style={styles.carritoItemInfo}>
+                        <h4 style={styles.carritoItemNombre}>{item.nombre}</h4>
+                        <p style={styles.carritoItemPrecio}>{item.precio} EUR</p>
+                      </div>
+                      
+                      <div style={styles.carritoItemCantidad}>
+                        <button 
+                          style={styles.btnCantidad}
+                          onClick={() => cambiarCantidad(item._id, item.cantidad - 1)}
+                        >-</button>
+                        <span style={styles.cantidadNumero}>{item.cantidad}</span>
+                        <button 
+                          style={styles.btnCantidad}
+                          onClick={() => cambiarCantidad(item._id, item.cantidad + 1)}
+                        >+</button>
+                      </div>
+                      
+                      <button
+                        style={styles.btnEliminar}
+                        onClick={() => eliminarDelCarrito(item._id)}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                
+                <div style={styles.carritoFooter}>
+                  <div style={styles.carritoTotal}>
+                    <span style={styles.carritoTotalTexto}>Total:</span>
+                    <span style={styles.carritoTotalPrecio}>{calcularTotal()} EUR</span>
+                  </div>
+                  
+                  <button style={styles.btnCheckout} onClick={abrirCheckout}>
+                    Realizar Pedido
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Checkout */}
+      {checkoutAbierto && (
+        <div style={styles.modalOverlay}>
+          <div ref={checkoutRef} style={styles.modalCheckout}>
+            <button style={styles.cerrarModal} onClick={() => setCheckoutAbierto(false)}>
+              <FaTimes />
+            </button>
+            
+            <h2 style={styles.checkoutTitulo}>Finalizar Compra</h2>
+            
+            <div style={styles.checkoutSecciones}>
+              {/* Sección Resumen del Pedido */}
+              <div style={styles.checkoutSeccion}>
+                <h3 style={styles.checkoutSubtitulo}>Resumen del pedido</h3>
+                
+                <div style={styles.resumenPedido}>
+                  {carrito.map(item => (
+                    <div key={item._id} style={styles.resumenItem}>
+                      <div style={styles.resumenItemInfo}>
+                        <span style={styles.resumenItemNombre}>{item.nombre}</span>
+                        <span style={styles.resumenItemCantidad}>x{item.cantidad}</span>
+                      </div>
+                      <span style={styles.resumenItemPrecio}>{(item.precio * item.cantidad).toFixed(2)} EUR</span>
+                    </div>
+                  ))}
+                  
+                  {datosEnvio.metodoEnvio === "express" && (
+                    <div style={styles.resumenItem}>
+                      <div style={styles.resumenItemInfo}>
+                        <span style={styles.resumenItemNombre}>Envío Express</span>
+                      </div>
+                      <span style={styles.resumenItemPrecio}>5.00 EUR</span>
+                    </div>
+                  )}
+                  
+                  <div style={styles.resumenTotal}>
+                    <span style={styles.resumenTotalTexto}>Total:</span>
+                    <span style={styles.resumenTotalPrecio}>{calcularTotal()} EUR</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Sección Datos de Envío */}
+              <div style={styles.checkoutSeccion}>
+                <h3 style={styles.checkoutSubtitulo}>Datos de envío</h3>
+                
+                <form style={styles.checkoutForm} onSubmit={procesarOrden}>
+                  <div style={styles.checkoutCampo}>
+                    <label htmlFor="nombre" style={styles.checkoutLabel}>Nombre completo</label>
+                    <input
+                      type="text"
+                      id="nombre"
+                      name="nombre"
+                      value={datosEnvio.nombre}
+                      onChange={handleInputChange}
+                      style={styles.checkoutInput}
+                      required
+                    />
+                  </div>
+                  
+                  <div style={styles.checkoutCampo}>
+                    <label htmlFor="email" style={styles.checkoutLabel}>Email</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={datosEnvio.email}
+                      onChange={handleInputChange}
+                      style={styles.checkoutInput}
+                      required
+                    />
+                  </div>
+                  
+                  <div style={styles.checkoutCampo}>
+                    <label htmlFor="telefono" style={styles.checkoutLabel}>Teléfono</label>
+                    <input
+                      type="tel"
+                      id="telefono"
+                      name="telefono"
+                      value={datosEnvio.telefono}
+                      onChange={handleInputChange}
+                      style={styles.checkoutInput}
+                      required
+                    />
+                  </div>
+                  
+                  <div style={styles.checkoutCampo}>
+                    <label htmlFor="direccion" style={styles.checkoutLabel}>Dirección de envío</label>
+                    <textarea
+                      id="direccion"
+                      name="direccion"
+                      value={datosEnvio.direccion}
+                      onChange={handleInputChange}
+                      style={styles.checkoutTextarea}
+                      required
+                    />
+                  </div>
+                  
+                  {/* Método de envío */}
+                  <div style={styles.checkoutCampo}>
+                    <label style={styles.checkoutLabel}>Método de envío</label>
+                    <div style={styles.checkoutOpciones}>
+                      <div style={styles.checkoutOpcion}>
+                        <input
+                          type="radio"
+                          id="envioNormal"
+                          name="metodoEnvio"
+                          value="normal"
+                          checked={datosEnvio.metodoEnvio === "normal"}
+                          onChange={handleInputChange}
+                        />
+                        <label htmlFor="envioNormal" style={styles.checkoutOpcionLabel}>
+                          Envío normal (3-5 días)
+                        </label>
+                      </div>
+                      
+                      <div style={styles.checkoutOpcion}>
+                        <input
+                          type="radio"
+                          id="envioExpress"
+                          name="metodoEnvio"
+                          value="express"
+                          checked={datosEnvio.metodoEnvio === "express"}
+                          onChange={handleInputChange}
+                        />
+                        <label htmlFor="envioExpress" style={styles.checkoutOpcionLabel}>
+                          Envío express (1-2 días) + 5€
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Método de pago */}
+                  <div style={styles.checkoutCampo}>
+                    <label style={styles.checkoutLabel}>Método de pago</label>
+                    <div style={styles.checkoutOpciones}>
+                      <div style={styles.checkoutOpcion}>
+                        <input
+                          type="radio"
+                          id="pagoContraentrega"
+                          name="metodoPago"
+                          value="contraentrega"
+                          checked={datosEnvio.metodoPago === "contraentrega"}
+                          onChange={handleInputChange}
+                        />
+                        <label htmlFor="pagoContraentrega" style={styles.checkoutOpcionLabel}>
+                          Pago contra entrega
+                        </label>
+                      </div>
+                      
+                      <div style={styles.checkoutOpcion}>
+                        <input
+                          type="radio"
+                          id="pagoTransferencia"
+                          name="metodoPago"
+                          value="transferencia"
+                          checked={datosEnvio.metodoPago === "transferencia"}
+                          onChange={handleInputChange}
+                        />
+                        <label htmlFor="pagoTransferencia" style={styles.checkoutOpcionLabel}>
+                          Transferencia bancaria
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {datosEnvio.metodoPago === "transferencia" && (
+                    <div style={styles.infoBancaria}>
+                      <p style={styles.infoBancariaTexto}>Datos para la transferencia:</p>
+                      <p>Banco: Banco Ejemplo</p>
+                      <p>IBAN: ES12 3456 7890 1234 5678 9012</p>
+                      <p>Beneficiario: Tienda de Mascotas S.L.</p>
+                      <p>Concepto: Pedido + Nombre completo</p>
+                    </div>
+                  )}
+                  
+                  <button 
+                    type="submit" 
+                    style={{
+                      ...styles.btnConfirmarPedido,
+                      opacity: procesandoPedido ? 0.7 : 1,
+                      cursor: procesandoPedido ? "not-allowed" : "pointer"
+                    }}
+                    disabled={procesandoPedido}
+                  >
+                    {procesandoPedido ? "Procesando..." : "Confirmar Pedido"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -307,60 +809,11 @@ const Tienda = () => {
 const styles = {
   /* ======= Fondo Completo ======= */
   body: {
-    backgroundColor: "#FFF2DB",
+    backgroundColor: "#FFF2DB", // Fondo cremita
+    minHeight: "100vh", // Abarca toda la altura de la pantalla
     margin: 0,
-    padding: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100vh",
-    marginTop: "90px",
-    fontFamily: "'Poppins', 'Segoe UI', sans-serif",
-  },
-
-  loaderContainer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "70vh",
-    flexDirection: "column",
-  },
-
-  spinner: {
-    color: "#FF8000",
-    width: "3rem",
-    height: "3rem",
-  },
-  
-  loaderText: {
-    marginTop: "15px",
-    color: "#1f2427",
-    fontSize: "1.1rem",
-  },
-
-  mensajeVacioContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "70vh",
-  },
-
-  mensajeVacio: {
-    textAlign: "center",
-    fontSize: "1.2rem",
-    color: "#2c3e50",
-    padding: "3rem",
-    backgroundColor: "rgba(255, 204, 0, 0.1)",
-    borderRadius: "15px",
-    margin: "2rem auto",
-    maxWidth: "600px",
-    border: "1px dashed #ffcc00",
-  },
-  
-  iconoVacio: {
-    fontSize: "3rem",
-    color: "#ffcc00",
-    marginBottom: "1rem",
+    padding: "20px",
+    position: "relative", // Para notificación flotante
   },
 
   /* ======= Contenedor Principal ======= */
@@ -369,147 +822,145 @@ const styles = {
     maxWidth: "1400px",
     margin: "auto",
     backgroundColor: "#FFF2DB",
-    padding: "40px 20px 60px",
-    backgroundImage: "linear-gradient(to bottom, #FFF8E8, #FFF2DB)",
-    position: "relative",
+    padding: "20px",
   },
 
-  /* ======= Header y Título ======= */
-  headerTienda: {
-    textAlign: "center",
-    marginBottom: "30px",
-    padding: "20px 0",
-    borderBottom: "2px dashed rgba(44, 62, 80, 0.2)",
-    position: "relative",
-  },
-
-  tituloTienda: {
-    color: "#2c3e50",
-    fontWeight: "800",
-    fontSize: "2.5rem",
-    textAlign: "center",
-    textTransform: "uppercase",
-    marginBottom: "10px",
-    textShadow: "2px 2px 0px rgba(255, 204, 0, 0.5)",
-    letterSpacing: "1px",
-    position: "relative",
-    display: "inline-block",
-  },
-
-  subtituloTienda: {
-    color: "#666",
-    fontSize: "1.1rem",
-    marginTop: "0",
-  },
-  
-  /* ======= Filtros y Búsqueda ======= */
-  filtrosContainer: {
+  /* ======= Notificación flotante ======= */
+  notificacion: {
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    backgroundColor: "#4CAF50",
+    color: "white",
+    padding: "12px 20px",
+    borderRadius: "5px",
+    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
     display: "flex",
-    flexWrap: "wrap",
+    alignItems: "center",
+    zIndex: "2000",
+    animation: "slideIn 0.3s ease-out",
+    maxWidth: "300px",
+  },
+
+  /* ======= Barra de navegación ======= */
+  barraNavegacion: {
+    display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    margin: "0 0 20px 0",
-    padding: "15px 20px",
-    backgroundColor: "rgba(31, 36, 39, 0.03)",
-    borderRadius: "12px",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-  },
-  
-  searchBox: {
-    display: "flex",
-    alignItems: "center",
-    flex: "1 1 300px",
-    position: "relative",
-    marginRight: "15px",
-    marginBottom: "10px",
-  },
-  
-  iconoBusqueda: {
-    position: "absolute",
-    left: "15px",
-    color: "#666",
-    fontSize: "16px",
-  },
-  
-  inputBusqueda: {
-    width: "100%",
-    padding: "12px 12px 12px 40px",
-    borderRadius: "25px",
-    border: "1px solid #ddd",
-    backgroundColor: "white",
-    fontSize: "0.95rem",
-    outline: "none",
-    transition: "all 0.3s ease",
-  },
-  
-  filtrosCategorias: {
-    display: "flex",
-    alignItems: "center",
-    flex: "1 1 300px",
-    gap: "10px",
-    flexWrap: "wrap",
-  },
-  
-  filtroHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "5px",
-    color: "#2c3e50",
-    fontWeight: "500",
-  },
-  
-  filtroTitulo: {
-    marginRight: "5px",
-    display: "none",
-    "@media (min-width: 768px)": {
-      display: "inline",
-    },
-  },
-  
-  selectFiltro: {
-    padding: "10px 15px",
-    borderRadius: "20px",
-    border: "1px solid #ddd",
-    backgroundColor: "white",
-    outline: "none",
-    cursor: "pointer",
-    marginBottom: "10px",
-  },
-  
-  resultadosCounter: {
-    textAlign: "right",
-    marginBottom: "20px",
-    fontSize: "0.9rem",
-    color: "#666",
-    padding: "0 5px",
-  },
-  
-  noResultados: {
-    gridColumn: "1 / -1", // Ocupar toda la fila
-    textAlign: "center",
-    padding: "40px",
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: "15px",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-  },
-  
-  btnReiniciarBusqueda: {
-    marginTop: "15px",
-    padding: "10px 20px",
-    backgroundColor: "#ffcc00",
-    color: "#1f2427",
-    border: "none",
-    borderRadius: "20px",
-    cursor: "pointer",
-    fontWeight: "500",
-    transition: "all 0.2s ease",
+    marginBottom: "30px",
+    paddingBottom: "15px",
+    borderBottom: "1px solid #e0e0e0",
   },
 
-  /* ======= Grid de Productos ======= */
+  /* ======= Título ======= */
+  tituloTienda: {
+    color: "#ffcc00",
+    fontWeight: "bold",
+    fontSize: "2.2rem",
+    textTransform: "uppercase",
+    margin: 0,
+  },
+
+  /* ======= Icono del carrito ======= */
+  iconoCarrito: {
+    position: "relative",
+    cursor: "pointer",
+    fontSize: "1.8rem",
+    color: "#1f2427",
+  },
+
+  carrito: {
+    fontSize: "1.8rem",
+  },
+
+  contadorCarrito: {
+    position: "absolute",
+    top: "-10px",
+    right: "-10px",
+    backgroundColor: "#ff6b6b",
+    color: "white",
+    borderRadius: "50%",
+    width: "22px",
+    height: "22px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "0.8rem",
+    fontWeight: "bold",
+  },
+
+  /* ======= Barra de búsqueda y filtros ======= */
+  filtrosContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+    flexWrap: "wrap",
+    gap: "15px",
+  },
+
+  barraBusqueda: {
+    flex: "1",
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: "30px",
+    padding: "10px 15px",
+    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+  },
+
+  iconoBusqueda: {
+    color: "#1f2427",
+    marginRight: "10px",
+  },
+
+  inputBusqueda: {
+    border: "none",
+    outline: "none",
+    width: "100%",
+    fontSize: "1rem",
+  },
+
+  filtroCategoria: {
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: "30px",
+    padding: "10px 15px",
+    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+  },
+
+  iconoFiltro: {
+    color: "#1f2427",
+    marginRight: "10px",
+  },
+
+  selectCategoria: {
+    border: "none",
+    outline: "none",
+    backgroundColor: "transparent",
+    fontSize: "1rem",
+    cursor: "pointer",
+  },
+
+  /* ======= Resultados de búsqueda ======= */
+  resultadosBusqueda: {
+    marginBottom: "20px",
+    color: "#1f2427",
+    fontWeight: "bold",
+  },
+
+  noResultados: {
+    textAlign: "center",
+    color: "#ff6b6b",
+    fontWeight: "bold",
+  },
+
+  /* ======= Grid de Productos (4 arriba y 4 abajo) ======= */
   productosGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "25px",
+    gridTemplateColumns: "repeat(4, 1fr)", // 4 columnas
+    gap: "20px",
     justifyContent: "center",
     margin: "0 auto",
     padding: "10px",
@@ -517,7 +968,7 @@ const styles = {
 
   /* ======= Diseño de Tarjetas ======= */
   productoCard: {
-    background: "linear-gradient(145deg, #1f2427, #2a3035)",
+    background: "#1f2427",
     borderRadius: "15px",
     padding: "15px",
     position: "relative",
@@ -525,243 +976,119 @@ const styles = {
     flexDirection: "column",
     justifyContent: "space-between",
     height: "100%",
-    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.15)",
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
     marginBottom: "20px",
-    transition: "all 0.3s ease-in-out",
-    border: "1px solid rgba(255, 255, 255, 0.05)",
-    overflow: "hidden",
+    transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+    cursor: "pointer",
   },
 
-  etiquetasContainer: {
+  /* ======= Etiquetas ======= */
+  ofertaLabel: {
     position: "absolute",
-    width: "100%",
-    top: "0",
-    left: "0",
-    zIndex: "5",
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "12px",
-  },
-  
-  btnFavorito: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    zIndex: "10",
-    padding: "0",
-  },
-  
-  iconoFavorito: {
+    top: "10px",
+    right: "10px",
+    backgroundColor: "#ff6b6b",
     color: "white",
-    fontSize: "16px",
+    padding: "5px 10px",
+    borderRadius: "5px",
+    fontSize: "0.8rem",
+    fontWeight: "bold",
+    zIndex: "1",
   },
-  
-  etiquetas: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
-    alignItems: "flex-end",
+
+  masVendido: {
+    position: "absolute",
+    top: "10px",
+    left: "10px",
+    backgroundColor: "#ffcc00",
+    color: "#1f2427",
+    padding: "5px 10px",
+    borderRadius: "5px",
+    fontSize: "0.8rem",
+    fontWeight: "bold",
+    zIndex: "1",
+  },
+
+  categoriaLabel: {
+    position: "absolute",
+    bottom: "80px",
+    right: "10px",
+    backgroundColor: "#3498db",
+    color: "white",
+    padding: "3px 8px",
+    borderRadius: "3px",
+    fontSize: "0.7rem",
+    fontWeight: "bold",
+    zIndex: "1",
   },
 
   /* ======= Ajustar todas las imágenes ======= */
-  imagenContainer: {
-    position: "relative",
-    overflow: "hidden",
-    borderRadius: "10px",
-    height: "200px",
-    marginBottom: "15px",
-  },
-
   productoImagen: {
     width: "100%",
-    height: "100%",
+    height: "200px",
     objectFit: "cover",
     borderRadius: "10px",
-    transition: "transform 0.5s ease",
-  },
-  
-  stockBajo: {
-    position: "absolute",
-    bottom: "10px",
-    left: "0",
-    right: "0",
-    margin: "0 auto",
-    width: "fit-content",
-    backgroundColor: "rgba(255, 128, 0, 0.85)",
-    color: "white",
-    fontSize: "0.8rem",
-    padding: "4px 10px",
-    borderRadius: "12px",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  
-  sinStock: {
-    position: "absolute",
-    top: "0",
-    left: "0",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.3rem",
-    fontWeight: "bold",
-    textTransform: "uppercase",
+    marginBottom: "10px",
   },
 
   /* ======= Información del Producto ======= */
   productoInfo: {
     textAlign: "center",
     flexGrow: 1,
-    padding: "5px 10px 15px",
-  },
-  
-  categoriaTag: {
-    display: "inline-block",
-    background: "rgba(255, 204, 0, 0.2)",
-    color: "#ffcc00",
-    padding: "3px 10px",
-    borderRadius: "12px",
-    fontSize: "0.75rem",
-    marginBottom: "10px",
-    fontWeight: "500",
   },
 
   productoTitulo: {
-    fontSize: "1.25rem",
+    fontSize: "1.2rem",
     fontWeight: "bold",
     margin: "10px 0",
     color: "#fff",
-    letterSpacing: "0.5px",
   },
 
   productoDescripcion: {
-    fontSize: "0.95rem",
-    color: "rgba(255, 255, 255, 0.8)",
-    lineHeight: "1.4",
-    marginBottom: "15px",
-    display: "-webkit-box",
-    "-webkit-line-clamp": "2",
-    "-webkit-box-orient": "vertical",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    fontSize: "1rem",
+    color: "#fff",
   },
 
+  productoPrecio: {
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+    margin: "10px 0",
+    color: "#ffcc00",
+  },
+
+  /* ======= Estrellas de calificación ======= */
   estrellas: {
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-    gap: "3px",
     marginBottom: "10px",
   },
 
   estrella: {
-    fontSize: "18px",
-  },
-  
-  reviewsCount: {
-    marginLeft: "5px",
-    fontSize: "0.85rem",
-    color: "#aaa",
-  },
-
-  envioGratis: {
-    color: "#00df38",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: "10px",
-    fontWeight: "bold",
-    backgroundColor: "rgba(0, 223, 56, 0.1)",
-    padding: "5px 10px",
-    borderRadius: "20px",
-    width: "fit-content",
-    margin: "10px auto",
-  },
-
-  iconoEnvio: {
-    marginRight: "5px",
-  },
-
-  precioContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    margin: "15px 0",
-  },
-  
-  precioAnterior: {
-    textDecoration: "line-through",
-    color: "#aaa",
-    fontSize: "0.9rem",
-    marginBottom: "5px",
-  },
-
-  precio: {
-    fontSize: "1.4rem",
-    fontWeight: "bold",
     color: "#ffcc00",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "10px",
-    margin: "0",
-  },
-  
-  descuentoPorcentaje: {
-    backgroundColor: "#e74c3c",
-    color: "white",
-    fontSize: "0.8rem",
-    padding: "3px 6px",
-    borderRadius: "8px",
-    fontWeight: "bold",
+    fontSize: "1.2rem",
+    margin: "0 2px",
   },
 
-  /* ======= Etiquetas ======= */
-  ofertaLabel: {
-    backgroundColor: "#FF8000",
-    color: "black",
-    padding: "6px 12px",
-    fontWeight: "bold",
-    fontSize: "0.9rem",
-    borderRadius: "5px",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-    display: "inline-block",
-    marginBottom: "5px",
-  },
-
-  masVendido: {
-    backgroundColor: "#e74c3c",
-    color: "white",
-    padding: "6px 12px",
-    fontWeight: "bold",
-    fontSize: "0.9rem",
-    borderRadius: "5px",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-    display: "inline-block",
+  /* ======= Envío gratis ======= */
+  envioGratis: {
+    fontSize: "1rem",
+    color: "#fff",
+    marginBottom: "10px",
   },
 
   /* ======= Botones ======= */
   botones: {
-    marginTop: "15px",
     display: "flex",
     flexDirection: "column",
     gap: "10px",
   },
 
+  /* ======= Botón Ver Detalles ======= */
   btnVer: {
-    width: "70%",
-    borderRadius: "25px",
+    width: "100%",
+    borderRadius: "5px",
     padding: "12px",
-    fontSize: "0.95rem",
+    fontSize: "1rem",
     textAlign: "center",
     fontWeight: "bold",
     display: "flex",
@@ -770,60 +1097,555 @@ const styles = {
     cursor: "pointer",
     border: "none",
     backgroundColor: "#ffcc00",
-    margin: "0 auto",
     color: "black",
-    transition: "all 0.2s ease",
-    boxShadow: "0 4px 8px rgba(255, 204, 0, 0.3)",
+    transition: "transform 0.1s ease, background-color 0.2s ease",
   },
 
-  btnComprar: {
-    width: "70%",
-    borderRadius: "25px",
+  /* ======= Botón Añadir al Carrito ======= */
+  btnAgregar: {
+    width: "100%",
+    borderRadius: "5px",
     padding: "12px",
-    fontSize: "0.95rem",
+    fontSize: "1rem",
+    textAlign: "center",
     fontWeight: "bold",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     border: "none",
-    backgroundColor: "#00df38",
-    color: "black",
-    margin: "0 auto",
-    transition: "all 0.2s ease",
-    boxShadow: "0 4px 8px rgba(0, 223, 56, 0.3)",
+    backgroundColor: "#4CAF50", // Verde
+    color: "white",
+    transition: "transform 0.1s ease, background-color 0.2s ease",
   },
 
-  iconoBoton: {
-    marginRight: "8px",
-    fontSize: "16px",
-  },
-  
   /* ======= Paginación ======= */
   paginacion: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    margin: "40px 0 10px",
+    marginTop: "30px",
     gap: "15px",
   },
-  
-  btnPaginacion: {
-    padding: "8px 15px",
-    backgroundColor: "#1f2427",
+
+  botonPaginacion: {
+    backgroundColor: "#ffcc00",
+    border: "none",
+    borderRadius: "5px",
+    padding: "12px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "background-color 0.2s ease, transform 0.1s ease",
+  },
+
+  paginaActual: {
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+    color: "#1f2427",
+  },
+
+  /* ======= Modal Overlay ======= */
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    animation: "fadeIn 0.3s ease-out",
+  },
+
+  /* ======= Modal ======= */
+  modal: {
+    backgroundColor: "#FFF2DB",
+    borderRadius: "15px",
+    padding: "25px",
+    maxWidth: "500px",
+    width: "90%",
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    animation: "scaleIn 0.3s ease-out",
+  },
+
+  /* ======= Botón para cerrar el modal ======= */
+  cerrarModal: {
+    position: "absolute",
+    top: "15px",
+    right: "15px",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1.5rem",
+    color: "#1f2427",
+    transition: "transform 0.2s ease",
+  },
+
+  /* ======= Imagen del modal (ajustada para verse completa) ======= */
+  modalImagen: {
+    width: "100%",
+    maxHeight: "300px", // Altura máxima para la imagen
+    objectFit: "contain", // Ajusta la imagen sin recortarla
+    borderRadius: "10px",
+    marginBottom: "15px",
+  },
+
+  /* ======= Título del modal ======= */
+  modalTitulo: {
+    fontSize: "1.5rem",
+    fontWeight: "bold",
+    color: "#1f2427",
+    marginBottom: "15px",
+    textAlign: "center",
+  },
+
+  /* ======= Categoría en modal ======= */
+  modalCategoria: {
+    fontSize: "1rem",
+    color: "#3498db",
+    marginBottom: "10px",
+  },
+
+  /* ======= Descripción del modal ======= */
+  modalDescripcion: {
+    fontSize: "1rem",
+    color: "#1f2427",
+    textAlign: "center",
+    marginBottom: "15px",
+    lineHeight: "1.5",
+  },
+
+  /* ======= Precio del modal ======= */
+  modalPrecio: {
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+    color: "#1f2427",
+    marginBottom: "15px",
+  },
+
+  /* ======= Envío gratis del modal ======= */
+  modalEnvioGratis: {
+    fontSize: "1rem",
+    color: "#1f2427",
+    marginBottom: "15px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  /* ======= Estrellas del modal ======= */
+  modalEstrellas: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: "20px",
+  },
+
+  /* ======= Carrito Panel Lateral ======= */
+  carritoOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "flex-end",
+    zIndex: 1000,
+    animation: "fadeIn 0.3s ease-out",
+  },
+
+  carritoPanel: {
+    width: "400px",
+    maxWidth: "90%",
+    height: "100%",
+    backgroundColor: "#FFF2DB",
+    boxShadow: "-5px 0 15px rgba(0, 0, 0, 0.1)",
+    display: "flex",
+    flexDirection: "column",
+    animation: "slideInRight 0.3s ease-out",
+  },
+
+  carritoHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px",
+    borderBottom: "1px solid #e0e0e0",
+  },
+
+  carritoTitulo: {
+    fontSize: "1.5rem",
+    fontWeight: "bold",
+    margin: 0,
+  },
+
+  cerrarCarrito: {
+    background: "none",
+    border: "none",
+    fontSize: "1.2rem",
+    cursor: "pointer",
+    color: "#666",
+  },
+
+  carritoVacio: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 20px",
+    height: "50%",
+    textAlign: "center",
+  },
+
+  carritoVacioSubtexto: {
+    color: "#888",
+    marginTop: "10px",
+  },
+
+  carritoItems: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "20px",
+  },
+
+  carritoItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "15px 0",
+    borderBottom: "1px solid #eee",
+  },
+
+  carritoItemImagen: {
+    width: "60px",
+    height: "60px",
+    objectFit: "cover",
+    borderRadius: "8px",
+    marginRight: "15px",
+  },
+
+  carritoItemInfo: {
+    flex: 1,
+  },
+
+  carritoItemNombre: {
+    fontSize: "1rem",
+    fontWeight: "bold",
+    margin: "0 0 5px 0",
+  },
+
+  carritoItemPrecio: {
+    fontSize: "0.9rem",
+    color: "#666",
+    margin: 0,
+  },
+
+  carritoItemCantidad: {
+    display: "flex",
+    alignItems: "center",
+    margin: "0 15px",
+  },
+
+  btnCantidad: {
+    width: "25px",
+    height: "25px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#f0f0f0",
+    border: "none",
+    borderRadius: "50%",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "16px",
+  },
+
+  cantidadNumero: {
+    margin: "0 10px",
+    fontWeight: "bold",
+  },
+
+  btnEliminar: {
+    background: "none",
+    border: "none",
+    color: "#ff6b6b",
+    cursor: "pointer",
+    fontSize: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "5px",
+  },
+
+  carritoFooter: {
+    padding: "20px",
+    borderTop: "1px solid #e0e0e0",
+  },
+
+  carritoTotal: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+
+  carritoTotalTexto: {
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+  },
+
+  carritoTotalPrecio: {
+    fontSize: "1.3rem",
+    fontWeight: "bold",
+    color: "#1f2427",
+  },
+
+  btnCheckout: {
+    width: "100%",
+    padding: "15px",
+    backgroundColor: "#4CAF50",
     color: "white",
     border: "none",
-    borderRadius: "20px",
+    borderRadius: "8px",
+    fontSize: "1rem",
+    fontWeight: "bold",
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "background-color 0.2s ease",
   },
-  
-  paginaActual: {
-    padding: "5px 10px",
-    backgroundColor: "rgba(255, 204, 0, 0.2)",
-    borderRadius: "20px",
-    color: "#2c3e50",
-    fontWeight: "500",
+
+  /* ======= Modal Checkout ======= */
+  modalCheckout: {
+    backgroundColor: "#FFF2DB",
+    borderRadius: "15px",
+    padding: "25px",
+    maxWidth: "800px",
+    width: "90%",
+    maxHeight: "90vh",
+    position: "relative",
+    overflowY: "auto",
+    animation: "scaleIn 0.3s ease-out",
+  },
+
+  checkoutTitulo: {
+    fontSize: "1.8rem",
+    fontWeight: "bold",
+    textAlign: "center",
+    margin: "0 0 25px 0",
+    color: "#1f2427",
+  },
+
+  checkoutSecciones: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "30px",
+  },
+
+  checkoutSeccion: {
+    padding: "20px",
+    backgroundColor: "#fff",
+    borderRadius: "10px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+  },
+
+  checkoutSubtitulo: {
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+    margin: "0 0 15px 0",
+    color: "#1f2427",
+    paddingBottom: "10px",
+    borderBottom: "2px solid #ffcc00",
+  },
+
+  resumenPedido: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+
+  resumenItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "1rem",
+    padding: "8px 0",
+    borderBottom: "1px solid #eee",
+  },
+
+  resumenItemInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  resumenItemNombre: {
+    fontWeight: "bold",
+  },
+
+  resumenItemCantidad: {
+    color: "#666",
+  },
+
+  resumenItemPrecio: {
+    fontWeight: "bold",
+  },
+
+  resumenTotal: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "15px 0 5px 0",
+    borderTop: "2px solid #ddd",
+    marginTop: "10px",
+  },
+
+  resumenTotalTexto: {
+    fontSize: "1.1rem",
+    fontWeight: "bold",
+  },
+
+  resumenTotalPrecio: {
+    fontSize: "1.3rem",
+    fontWeight: "bold",
+    color: "#1f2427",
+  },
+
+  checkoutForm: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+  },
+
+  checkoutCampo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+  },
+
+  checkoutLabel: {
+    fontSize: "0.9rem",
+    fontWeight: "bold",
+    color: "#555",
+  },
+
+  checkoutInput: {
+    padding: "12px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    fontSize: "1rem",
+  },
+
+  checkoutTextarea: {
+    padding: "12px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    fontSize: "1rem",
+    minHeight: "80px",
+    resize: "vertical",
+  },
+
+  checkoutOpciones: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+
+  checkoutOpcion: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  checkoutOpcionLabel: {
+    fontSize: "0.95rem",
+  },
+
+  infoBancaria: {
+    backgroundColor: "#f5f5f5",
+    padding: "15px",
+    borderRadius: "8px",
+    marginTop: "10px",
+    fontSize: "0.9rem",
+  },
+
+  infoBancariaTexto: {
+    fontWeight: "bold",
+    marginBottom: "10px",
+  },
+
+  btnConfirmarPedido: {
+    width: "100%",
+    padding: "15px",
+    backgroundColor: "#4CAF50",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "1.1rem",
+    fontWeight: "bold",
+    cursor: "pointer",
+    marginTop: "15px",
+    transition: "background-color 0.2s ease",
+  },
+
+  /* ======= Animaciones ======= */
+  "@keyframes fadeIn": {
+    from: { opacity: 0 },
+    to: { opacity: 1 }
+  },
+
+  "@keyframes scaleIn": {
+    from: { transform: "scale(0.9)", opacity: 0 },
+    to: { transform: "scale(1)", opacity: 1 }
+  },
+
+  "@keyframes slideInRight": {
+    from: { transform: "translateX(100%)" },
+    to: { transform: "translateX(0)" }
+  },
+
+  "@keyframes slideIn": {
+    from: { transform: "translateY(-20px)", opacity: 0 },
+    to: { transform: "translateY(0)", opacity: 1 }
+  },
+
+  /* ======= Ajuste Responsivo ======= */
+  "@media (max-width: 1024px)": {
+    productosGrid: {
+      gridTemplateColumns: "repeat(3, 1fr)", // 3 columnas en tablets
+    },
+    checkoutSecciones: {
+      flexDirection: "column",
+    }
+  },
+
+  "@media (max-width: 768px)": {
+    productosGrid: {
+      gridTemplateColumns: "repeat(2, 1fr)", // 2 columnas en móviles más grandes
+    },
+    filtrosContainer: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+    barraBusqueda: {
+      marginBottom: "10px",
+    },
+    carritoPanel: {
+      width: "100%",
+    }
+  },
+
+  "@media (max-width: 480px)": {
+    productosGrid: {
+      gridTemplateColumns: "repeat(1, 1fr)", // 1 columna en móviles pequeños
+    },
+    tituloTienda: {
+      fontSize: "1.8rem",
+    }
   },
 };
 
