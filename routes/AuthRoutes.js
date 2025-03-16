@@ -15,6 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Rutas existentes...
+
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -40,6 +41,7 @@ router.post("/login", async (req, res) => {
       email: user.email,
       direccion: user.direccion,
       fechaRegistro: user.fechaRegistro,
+      role: user.role || "user" // Devolver el campo role en lugar de isAdmin
     };
 
     res.status(200).json({ message: "Login exitoso", usuario: userData });

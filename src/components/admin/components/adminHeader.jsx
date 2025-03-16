@@ -1,76 +1,60 @@
 import React from "react";
-import { Link } from "react-router-dom";
 
 const AdminHeader = () => {
-  return (
-    <nav style={styles.adminHeader}>
-      <div style={styles.headerContainer}>
-        {/* Marca / Nombre */}
-        <Link style={styles.brand} to="/admin">
-          Grande Sabor y Huellitas
-        </Link>
+  // Función simple para cerrar sesión sin dependencias
+  const handleLogout = () => {
+    // Limpiar información de la sesión
+    localStorage.removeItem("user");
+    
+    // Redirigir a la página de login
+    window.location.href = "/login";
+  };
 
-        {/* Opciones a la derecha */}
-        <ul style={styles.navOptions}>
-          <li>
-            <Link style={styles.navLink} to="/admin/notificaciones">
-              Notificaciones
-            </Link>
-          </li>
-          <li>
-            <Link style={styles.navLink} to="/admin/perfil">
-              Perfil
-            </Link>
-          </li>
-          <li>
-            <Link style={styles.navLink} to="/logout">
-              Cerrar Sesión
-            </Link>
-          </li>
-        </ul>
+  return (
+    <div style={styles.adminHeader}>
+      <div style={styles.userSection}>
+        <button 
+          onClick={handleLogout} 
+          style={styles.logoutButton}
+        >
+          Cerrar Sesión
+        </button>
       </div>
-    </nav>
+    </div>
   );
 };
 
-// Estilos en línea con los colores proporcionados
+// Estilos en línea
 const styles = {
   adminHeader: {
-    backgroundColor: "rgba(31, 36, 39, 0.8)", // Gris oscuro con transparencia
-    padding: "15px 20px",
     display: "flex",
-    justifyContent: "center",
-    width: "100%",
-  },
-  headerContainer: {
-    display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
-    width: "100%",
-    maxWidth: "1200px",
+    backgroundColor: "#00515F",
+    color: "white",
+    padding: "0 20px",
+    height: "60px",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
   },
-  brand: {
-    fontSize: "1.5rem",
-    fontWeight: "bold",
-    color: "#FFC914", // Amarillo
-    textDecoration: "none",
-  },
-  navOptions: {
+  userSection: {
     display: "flex",
-    listStyle: "none",
-    gap: "20px",
-    margin: 0,
-    padding: 0,
+    alignItems: "center"
   },
-  navLink: {
-    color: "#FFFFFF", // Blanco
-    textDecoration: "none",
-    transition: "color 0.3s ease-in-out",
+  logoutButton: {
+    backgroundColor: "#FF8000",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    padding: "8px 12px",
+    cursor: "pointer",
     fontWeight: "bold",
-  },
-  navLinkHover: {
-    color: "#FF8000", // Verde/Naranja fuerte
-  },
+    transition: "background-color 0.3s"
+  }
 };
 
 export default AdminHeader;

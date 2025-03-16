@@ -52,6 +52,29 @@ const Tienda = () => {
       });
   }, []);
 
+  // Función para manejar URLs de imágenes (Cloudinary o locales)
+  const getImageUrl = (producto) => {
+    // Si ya es una URL de Cloudinary, la usamos directamente
+    if (producto.imagenUrl && (
+      producto.imagenUrl.includes('cloudinary.com') || 
+      producto.imagenUrl.startsWith('http')
+    )) {
+      return producto.imagenUrl;
+    } 
+    // Fallback para rutas locales antiguas
+    else if (producto.imagenUrl) {
+      return `http://localhost:5000${producto.imagenUrl.startsWith('/') ? producto.imagenUrl : '/' + producto.imagenUrl}`;
+    }
+    // Fallback para campo imagen antiguo
+    else if (producto.imagen) {
+      return `http://localhost:5000/uploads/${producto.imagen}`;
+    }
+    // Imagen por defecto en Cloudinary
+    else {
+      return "https://res.cloudinary.com/dozphinph/image/upload/v1710777777/products/default-product_abcdef.jpg";
+    }
+  };
+
   // Función para filtrar productos basados en la búsqueda y categoría
   useEffect(() => {
     let resultado = productos;
@@ -231,7 +254,7 @@ const Tienda = () => {
           nombre: item.nombre,
           precio: item.precio,
           cantidad: item.cantidad,
-          imagenUrl: item.imagenUrl || `/uploads/${item.imagen}`
+          imagenUrl: getImageUrl(item) // Usar la función de manejo de URLs
         })),
         datosCliente: datosEnvio,
       };
@@ -394,13 +417,14 @@ const Tienda = () => {
               {/* Etiqueta de Categoría */}
               {producto.categoria && <span style={styles.categoriaLabel}>{producto.categoria}</span>}
 
-              {/* Imagen del producto */}
+              {/* Imagen del producto - ACTUALIZADA PARA CLOUDINARY */}
               <img
-                src={`http://localhost:5000${producto.imagenUrl?.startsWith('/') ? producto.imagenUrl : '/' + producto.imagenUrl || `/uploads/${producto.imagen}`}`}
+                src={getImageUrl(producto)}
                 alt={producto.nombre}
                 style={styles.productoImagen}
-                onLoad={() => console.log("Imagen cargada")}
-                onError={(e) => { e.target.src = "http://localhost:5000/uploads/default.jpg"; }}
+                onError={(e) => { 
+                  e.target.src = "https://res.cloudinary.com/dozphinph/image/upload/v1710777777/products/default-product_abcdef.jpg"; 
+                }}
               />
 
               {/* Información del producto */}
@@ -487,11 +511,14 @@ const Tienda = () => {
             {/* Título del producto */}
             <h2 style={styles.modalTitulo}>{productoSeleccionado.nombre}</h2>
 
-            {/* Imagen del producto (ajustada para verse completa) */}
+            {/* Imagen del producto - ACTUALIZADA PARA CLOUDINARY */}
             <img
-              src={`http://localhost:5000${productoSeleccionado.imagenUrl?.startsWith('/') ? productoSeleccionado.imagenUrl : '/' + productoSeleccionado.imagenUrl || `/uploads/${productoSeleccionado.imagen}`}`}
+              src={getImageUrl(productoSeleccionado)}
               alt={productoSeleccionado.nombre}
               style={styles.modalImagen}
+              onError={(e) => { 
+                e.target.src = "https://res.cloudinary.com/dozphinph/image/upload/v1710777777/products/default-product_abcdef.jpg"; 
+              }}
             />
 
             {/* Categoría */}
@@ -560,10 +587,14 @@ const Tienda = () => {
                 <div style={styles.carritoItems}>
                   {carrito.map((item) => (
                     <div key={item._id} style={styles.carritoItem}>
+                      {/* Imagen del producto en carrito - ACTUALIZADA PARA CLOUDINARY */}
                       <img 
-                        src={`http://localhost:5000${item.imagenUrl?.startsWith('/') ? item.imagenUrl : '/' + item.imagenUrl || `/uploads/${item.imagen}`}`}
+                        src={getImageUrl(item)}
                         alt={item.nombre}
                         style={styles.carritoItemImagen}
+                        onError={(e) => { 
+                          e.target.src = "https://res.cloudinary.com/dozphinph/image/upload/v1710777777/products/default-product_abcdef.jpg"; 
+                        }}
                       />
                       
                       <div style={styles.carritoItemInfo}>

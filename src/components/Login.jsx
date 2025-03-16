@@ -26,9 +26,15 @@ function Login() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(`¡Bienvenido, ${result.usuario.nombre}!`); // ✅ Alerta de bienvenida
-        login(result.usuario); // ✅ Actualiza el estado del usuario en el contexto
-        navigate("/cliente"); // ✅ Redirige al usuario después de iniciar sesión
+        alert(`¡Bienvenido, ${result.usuario.nombre}!`);
+        login(result.usuario); // Actualiza el estado del usuario en el contexto
+        
+        // Redirige según el rol del usuario
+        if (result.usuario.role === "admin") {
+          navigate("/admin"); // Redirige a administrador si tiene rol admin
+        } else {
+          navigate("/cliente"); // Redirige a cliente en todos los demás casos
+        }
       } else {
         setError(result.error || "Correo o contraseña incorrectos.");
       }

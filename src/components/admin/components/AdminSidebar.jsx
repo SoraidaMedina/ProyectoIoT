@@ -16,6 +16,15 @@ const AdminSidebar = () => {
           <ul>
             <li><Link to="/admin/buscar-usuario" style={styles.sidebarLink}>🔍 Buscar Usuario</Link></li>
             <li><Link to="/admin/lista-usuario" style={styles.sidebarLink}>📋 Lista de Usuarios</Link></li>
+            <li><Link to="/admin/crud-usuarios" style={styles.sidebarLink}>✏️ Administrar Usuarios</Link></li>
+          </ul>
+        </li>
+
+        {/* Tienda */}
+        <li>
+          <strong style={styles.sectionTitle}>Tienda</strong>
+          <ul>
+            <li><Link to="/admin/crud-tienda" style={styles.sidebarLink}>🛒 Administrar Productos</Link></li>
           </ul>
         </li>
 

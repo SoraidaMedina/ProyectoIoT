@@ -36,6 +36,8 @@ import ListaIots from "./components/admin/components/ListaIots";
 import ConfiguracionDatos from "./components/Admin/components/ConfiguracionDatos";
 import PersonalizacionPanel from "./components/Admin/components/PersonalizacionPanel";
 import HistorialActividades from "./components/Admin/components/HistorialActividades";
+import AdminCRUDUsuarios from "./components/admin/components/AdminCRUDUsuarios";
+import AdminCRUDTienda from "./components/admin/components/AdminCRUDTienda";
 
 // Importa Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -131,6 +133,8 @@ function App() {
             <Route path="configuracion-datos" element={<ConfiguracionDatos />} />
             <Route path="personalizacion-panel" element={<PersonalizacionPanel />} />
             <Route path="historial" element={<HistorialActividades />} />
+            <Route path="crud-usuarios" element={<AdminCRUDUsuarios />} />
+            <Route path="crud-tienda" element={<AdminCRUDTienda />} />
           </Route>
         </Routes>
         <Footer />

@@ -34,6 +34,8 @@ const historialRoutes = require("./routes/historialRoutes");
 const dispositivosRoutes = require("./routes/dispositivosRoutes");
 const personalizacionRoutes = require("./routes/personalizacionRoutes");
 const uploadRoutes = require('./routes/uploadRoutes');
+const adminCRUDUsuariosRoutes = require("./routes/adminCRUDUsuariosRoutes");
+const tiendaCRUDRoutes = require("./routes/tiendaCRUDRoutes");
 
 //rutas administrador
 app.use("/api/iot", iotRoutes);
@@ -45,6 +47,8 @@ app.use("/api/dispositivos", dispositivosRoutes);
 app.use("/api/personalizacion", personalizacionRoutes);
 app.use('/uploads', express.static('public/uploads'));
 app.use('/api/upload', uploadRoutes);
+app.use("/api/admin/crud/usuarios", adminCRUDUsuariosRoutes);
+app.use("/api/admin/crud/tienda", tiendaCRUDRoutes);
 
 // Usar rutas existentes
 app.use("/api/tienda", tiendaRoutes);
