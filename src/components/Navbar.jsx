@@ -3,7 +3,8 @@ import { Navbar, Nav, Container, Button, NavDropdown } from "react-bootstrap";
 import { NavLink, useLocation } from "react-router-dom";
 import { 
   FaSignOutAlt, FaSignInAlt, FaHome, FaStore, FaQuestionCircle, 
-  FaUsers, FaEnvelope, FaPaw, FaTachometerAlt, FaUser, FaCog, FaLifeRing 
+  FaUsers, FaEnvelope, FaPaw, FaTachometerAlt, FaUser, FaCog, FaLifeRing,
+  FaNetworkWired 
 } from "react-icons/fa";
 import logo from "../assets/Logo.png";
 import { useUserContext } from "../context/UserContext";
@@ -18,10 +19,8 @@ const publicNavLinks = [
 
 // Enlaces privados con iconos
 const privateNavLinks = [
-  { name: "Estado Dispensador", to: "/Estado-Dispensador", icon: <FaTachometerAlt className="me-2" /> },
   { name: "Cliente", to: "/cliente", icon: <FaUser className="me-2" /> },
   { name: "Tienda", to: "/tienda", icon: <FaStore className="me-2" /> },
-  { name: "Configuracion", to: "/configuracion-dispensador", icon: <FaCog className="me-2" /> },
 ];
 
 function NavigationBar() {
@@ -111,6 +110,19 @@ function NavigationBar() {
                         {link.icon} {link.name}
                       </Nav.Link>
                     ))}
+
+                    <NavDropdown 
+                      title={<><FaNetworkWired className="me-2" /> IoT</>} 
+                      id="iot-dropdown"
+                      className="text-white"
+                    >
+                      <NavDropdown.Item as={NavLink} to="/Estado-Dispensador">
+                        <FaTachometerAlt className="me-2" /> Estado IoT
+                      </NavDropdown.Item>
+                      <NavDropdown.Item as={NavLink} to="/configuracion-dispensador">
+                        <FaCog className="me-2" /> Configuración
+                      </NavDropdown.Item>
+                    </NavDropdown>
 
                     <NavDropdown 
                       title={<><FaUser className="me-2" /> Perfil</>} 
