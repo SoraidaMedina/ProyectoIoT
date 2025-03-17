@@ -17,6 +17,7 @@ const nosotrosRoutes = require("./routes/nosotros");
 const inicioRoutes = require("./routes/inicio");
 const sliderRoutes = require("./routes/slider");
 const tiendaRoutes = require("./routes/tienda");
+const pedidosRoutes = require('./routes/pedidosRoutes');
 const preguntasRoutes = require("./routes/preguntas");
 
 // Importar nuevas rutas
@@ -57,6 +58,7 @@ app.use("/api/inicio", inicioRoutes);
 app.use("/api/productos", productosRoutes);
 app.use("/api/nosotros", nosotrosRoutes);
 app.use("/api/preguntas", preguntasRoutes);
+app.use('/api/pedidos', pedidosRoutes);
 
 // Usar nuevas rutas
 app.use("/api/auth", AuthRoutes);

@@ -109,17 +109,6 @@ const Footer = () => {
                 <i className="fa fa-phone-square" style={styles.icon}></i>
                 Contacto
               </a>
-              <a
-                href="#"
-                style={styles.link}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavigation("/ayuda");
-                }}
-              >
-                <i className="fa fa-life-ring" style={styles.icon}></i>
-                Centro de Ayuda
-              </a>
             </div>
           </div>
 

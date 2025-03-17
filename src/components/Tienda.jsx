@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
-import { FaInfoCircle, FaTruck, FaStar, FaTimes, FaArrowLeft, FaArrowRight, FaSearch, FaFilter, FaShoppingCart, FaTrash, FaCheckCircle } from "react-icons/fa";
+import { FaInfoCircle, FaTruck, FaStar, FaTimes, FaArrowLeft, FaArrowRight, FaSearch, FaFilter, FaShoppingCart, FaTrash, FaCheckCircle, FaUser } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom';
+import { useUserContext } from "../context/UserContext"; // Importamos el contexto de usuario
 
 const Tienda = () => {
+  const navigate = useNavigate();
+  const { user } = useUserContext(); // Obtenemos el usuario actual
   const [productos, setProductos] = useState([]);
   const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,6 +34,20 @@ const Tienda = () => {
   // Referencias para cerrar modales al hacer clic fuera
   const carritoRef = useRef(null);
   const checkoutRef = useRef(null);
+
+  // Llenar automáticamente los datos de envío cuando hay un usuario logueado
+  useEffect(() => {
+    if (user) {
+      setDatosEnvio({
+        nombre: `${user.nombre} ${user.apellidoPaterno} ${user.apellidoMaterno || ''}`.trim(),
+        email: user.email || "",
+        telefono: user.telefono || "",
+        direccion: user.direccion || "",
+        metodoEnvio: "normal",
+        metodoPago: "contraentrega"
+      });
+    }
+  }, [user]);
 
   // Obtener los productos desde la API
   useEffect(() => {
@@ -257,6 +275,8 @@ const Tienda = () => {
           imagenUrl: getImageUrl(item) // Usar la función de manejo de URLs
         })),
         datosCliente: datosEnvio,
+        // Si el usuario está logueado, incluir su ID
+        ...(user && { usuarioId: user._id })
       };
       
       // Enviar al backend
@@ -280,10 +300,10 @@ const Tienda = () => {
         // Cerrar checkout y resetear datos
         setCheckoutAbierto(false);
         setDatosEnvio({
-          nombre: "",
-          email: "",
-          telefono: "",
-          direccion: "",
+          nombre: user ? `${user.nombre} ${user.apellidoPaterno} ${user.apellidoMaterno || ''}`.trim() : "",
+          email: user ? user.email : "",
+          telefono: user ? user.telefono || "" : "",
+          direccion: user ? user.direccion || "" : "",
           metodoEnvio: "normal",
           metodoPago: "contraentrega"
         });
@@ -291,8 +311,8 @@ const Tienda = () => {
         // Guardar referencia del pedido
         localStorage.setItem('ultimoPedido', data.pedido._id);
         
-      // Redirigir a página de confirmación
-         window.location.href = `/confirmacion/${data.pedido._id}`;
+        // Redirigir a página de confirmación
+        navigate(`/confirmacion/${data.pedido._id}`);
       } else {
         throw new Error(data.mensaje || 'Error al procesar el pedido');
       }
@@ -687,58 +707,91 @@ const Tienda = () => {
                 <h3 style={styles.checkoutSubtitulo}>Datos de envío</h3>
                 
                 <form style={styles.checkoutForm} onSubmit={procesarOrden}>
-                  <div style={styles.checkoutCampo}>
-                    <label htmlFor="nombre" style={styles.checkoutLabel}>Nombre completo</label>
-                    <input
-                      type="text"
-                      id="nombre"
-                      name="nombre"
-                      value={datosEnvio.nombre}
-                      onChange={handleInputChange}
-                      style={styles.checkoutInput}
-                      required
-                    />
-                  </div>
+                  {/* Mostrar información del usuario si está logueado */}
+                  {user ? (
+                    <div style={styles.usuarioLogueado}>
+                      <div style={styles.infoUsuario}>
+                        <FaUser style={{ fontSize: "32px", color: "#4CAF50", marginRight: "12px" }} />
+                        <div>
+                          <p style={{ margin: "0 0 8px 0", fontWeight: "bold", fontSize: "16px" }}>
+                            Hola {user.nombre}, usaremos tus datos guardados
+                          </p>
+                          <p style={{ margin: "0 0 4px 0", fontSize: "14px" }}><strong>Email:</strong> {user.email}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Solo pedir la dirección si no está disponible */}
+                      <div style={styles.checkoutCampo}>
+                        <label htmlFor="direccion" style={styles.checkoutLabel}>
+                          {user.direccion ? "Confirma tu dirección de envío" : "Añade tu dirección de envío"}
+                        </label>
+                        <textarea
+                          id="direccion"
+                          name="direccion"
+                          value={datosEnvio.direccion}
+                          onChange={handleInputChange}
+                          style={styles.checkoutTextarea}
+                          required
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    // Formulario completo para usuarios no logueados
+                    <>
+                      <div style={styles.checkoutCampo}>
+                        <label htmlFor="nombre" style={styles.checkoutLabel}>Nombre completo</label>
+                        <input
+                          type="text"
+                          id="nombre"
+                          name="nombre"
+                          value={datosEnvio.nombre}
+                          onChange={handleInputChange}
+                          style={styles.checkoutInput}
+                          required
+                        />
+                      </div>
+                      
+                      <div style={styles.checkoutCampo}>
+                        <label htmlFor="email" style={styles.checkoutLabel}>Email</label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={datosEnvio.email}
+                          onChange={handleInputChange}
+                          style={styles.checkoutInput}
+                          required
+                        />
+                      </div>
+                      
+                      <div style={styles.checkoutCampo}>
+                        <label htmlFor="telefono" style={styles.checkoutLabel}>Teléfono</label>
+                        <input
+                          type="tel"
+                          id="telefono"
+                          name="telefono"
+                          value={datosEnvio.telefono}
+                          onChange={handleInputChange}
+                          style={styles.checkoutInput}
+                          required
+                        />
+                      </div>
+                      
+                      <div style={styles.checkoutCampo}>
+                        <label htmlFor="direccion" style={styles.checkoutLabel}>Dirección de envío</label>
+                        <textarea
+                          id="direccion"
+                          name="direccion"
+                          value={datosEnvio.direccion}
+                          onChange={handleInputChange}
+                          style={styles.checkoutTextarea}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
                   
-                  <div style={styles.checkoutCampo}>
-                    <label htmlFor="email" style={styles.checkoutLabel}>Email</label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={datosEnvio.email}
-                      onChange={handleInputChange}
-                      style={styles.checkoutInput}
-                      required
-                    />
-                  </div>
-                  
-                  <div style={styles.checkoutCampo}>
-                    <label htmlFor="telefono" style={styles.checkoutLabel}>Teléfono</label>
-                    <input
-                      type="tel"
-                      id="telefono"
-                      name="telefono"
-                      value={datosEnvio.telefono}
-                      onChange={handleInputChange}
-                      style={styles.checkoutInput}
-                      required
-                    />
-                  </div>
-                  
-                  <div style={styles.checkoutCampo}>
-                    <label htmlFor="direccion" style={styles.checkoutLabel}>Dirección de envío</label>
-                    <textarea
-                      id="direccion"
-                      name="direccion"
-                      value={datosEnvio.direccion}
-                      onChange={handleInputChange}
-                      style={styles.checkoutTextarea}
-                      required
-                    />
-                  </div>
-                  
-                  {/* Método de envío */}
+                  {/* Método de envío (siempre visible) */}
                   <div style={styles.checkoutCampo}>
                     <label style={styles.checkoutLabel}>Método de envío</label>
                     <div style={styles.checkoutOpciones}>
@@ -772,7 +825,7 @@ const Tienda = () => {
                     </div>
                   </div>
                   
-                  {/* Método de pago */}
+                  {/* Método de pago (siempre visible) */}
                   <div style={styles.checkoutCampo}>
                     <label style={styles.checkoutLabel}>Método de pago</label>
                     <div style={styles.checkoutOpciones}>
@@ -835,6 +888,24 @@ const Tienda = () => {
       )}
     </div>
   );
+};
+
+// Estilos adicionales para usuario logueado
+const newStyles = {
+  // Estilo para la sección de usuario logueado
+  usuarioLogueado: {
+    marginBottom: "20px",
+  },
+  
+  // Estilo para la información del usuario
+  infoUsuario: {
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#f9f9f9",
+    padding: "15px",
+    borderRadius: "8px",
+    marginBottom: "15px",
+  },
 };
 
 const styles = {
@@ -1678,6 +1749,9 @@ const styles = {
       fontSize: "1.8rem",
     }
   },
+  
+  // Añadir los nuevos estilos al objeto principal
+  ...newStyles
 };
 
 export default Tienda;

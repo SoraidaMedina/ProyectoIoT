@@ -25,6 +25,7 @@ import PerfilMascota from "./components/pages/PerfilMascota";
 import EstadoDispensador from "./components/pages/EstadoDispensador";
 import PerfilPage from "./components/pages/PerfilPage";
 import RecuperarContrasena from './components/RecuperarContrasena';
+import ConfirmacionPedido from "./components/ConfirmacionPedido";
 
 // Importa los componentes de administración
 import AdminLayout from "./components/Admin/components/adminLayout";
@@ -64,6 +65,7 @@ function App() {
 
           {/* Rutas públicas */}
           <Route path="/tienda" element={<Tienda />} />
+          <Route path="/confirmacion/:id" element={<ConfirmacionPedido />} />
           <Route path="/nosotros" element={<Nosotros />} />
           <Route path="/subir-imagen" element={<SubirImagen />} />
           <Route path="/contacto" element={<Contact />} />
