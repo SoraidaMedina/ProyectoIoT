@@ -2,24 +2,26 @@ const mongoose = require("mongoose");
 
 const InicioSchema = new mongoose.Schema(
   {
-    informacion_producto: String,
-    mensaje_bienvenida: String,
-    banner: {
+    bannerPrincipal: {
       titulo: String,
       descripcion: String,
-      boton_texto: String,
-      boton_url: String
+      botonTexto: String
     },
-    carrusel_productos: [
+    bienvenidaSeccion: {
+      titulo: String,
+      descripcion: String
+    },
+    secciones: [
       {
-        nombre: String,
-        imagen: String,
-        descripcion: String
+        id: Number,
+        titulo: String,
+        descripcion: String,
+        detalle: String,
+        imagen: String
       }
-    ],
-    proceso_compra: String
+    ]
   },
-  { collection: "inicio" } // 👈 Forzamos el nombre de la colección a "inicio"
+  { collection: "inicio" } // 👈 Asegura que coincida con el nombre de la colección en la BD
 );
 
 module.exports = mongoose.model("Inicio", InicioSchema);

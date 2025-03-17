@@ -21,10 +21,10 @@ function Hero() {
       <Container>
         {inicio ? (
           <>
-            <h1 style={styles.heroTitle}>{inicio.banner.titulo}</h1>
-            <p style={styles.heroSubtitle}>{inicio.banner.descripcion}</p>
+            <h1 style={styles.heroTitle}>{inicio.bannerPrincipal.titulo}</h1>
+            <p style={styles.heroSubtitle}>{inicio.bannerPrincipal.descripcion}</p>
             <Button variant="warning" size="lg">
-              {inicio.banner.boton_texto}
+              {inicio.bannerPrincipal.botonTexto}
             </Button>
           </>
         ) : (

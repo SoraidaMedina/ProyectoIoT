@@ -34,7 +34,7 @@ import BuscarUsuario from "./components/admin/components/BuscarUsuario";
 import ListaUsuarios from "./components/admin/components/ListaUsuarios";
 import BuscarIoT from "./components/admin/components/BuscarIot";
 import ListaIots from "./components/admin/components/ListaIots";
-import ConfiguracionDatos from "./components/Admin/components/ConfiguracionDatos";
+import ConfiguracionDatos from "./components/admin/components/ConfiguracionDatos";
 import PersonalizacionPanel from "./components/Admin/components/PersonalizacionPanel";
 import HistorialActividades from "./components/Admin/components/HistorialActividades";
 import AdminCRUDUsuarios from "./components/admin/components/AdminCRUDUsuarios";

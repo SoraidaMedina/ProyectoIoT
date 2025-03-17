@@ -29,7 +29,6 @@ const DispensadorRoutes = require("./routes/dispensadorRoutes"); // ✅ Importar
 //Importar Admin
 const iotRoutes = require("./routes/iotRoutes");
 const adminUsuariosRoutes = require("./routes/adminUsuariosRoutes");
-const configuracionRoutes = require("./routes/ConfiguracionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const historialRoutes = require("./routes/historialRoutes");
 const dispositivosRoutes = require("./routes/dispositivosRoutes");
@@ -41,7 +40,6 @@ const tiendaCRUDRoutes = require("./routes/tiendaCRUDRoutes");
 //rutas administrador
 app.use("/api/iot", iotRoutes);
 app.use("/api/admin/usuarios", adminUsuariosRoutes);
-app.use("/api/configuracion", configuracionRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api/historial", historialRoutes);
 app.use("/api/dispositivos", dispositivosRoutes);

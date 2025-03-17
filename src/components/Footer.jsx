@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "font-awesome/css/font-awesome.min.css";
 
@@ -7,19 +7,89 @@ const Footer = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Estado inicial con valores por defecto más robustos
+  const [footerData, setFooterData] = useState({
+    politicas: {
+      privacidad: { 
+        titulo: "Política de Privacidad", 
+        contenido: "Contenido de política de privacidad" 
+      },
+      terminosCondiciones: { 
+        titulo: "Términos y Condiciones", 
+        contenido: "Contenido de términos y condiciones" 
+      }
+    },
+    redesSociales: {
+      facebook: { 
+        url: "#", 
+        nombrePagina: "Facebook" 
+      },
+      instagram: { 
+        url: "#", 
+        nombrePagina: "Instagram" 
+      },
+      twitter: { 
+        url: "#", 
+        nombrePagina: "Twitter" 
+      }
+    },
+    misionVision: {
+      mision: { 
+        titulo: "Misión", 
+        contenido: "Nuestra misión" 
+      },
+      vision: { 
+        titulo: "Visión", 
+        contenido: "Nuestra visión" 
+      },
+      valores: [
+        { 
+          titulo: "Valor", 
+          contenido: "Descripción del valor" 
+        }
+      ]
+    }
+  });
+
+  useEffect(() => {
+    const cargarDatosFooter = async () => {
+      try {
+        console.log("Cargando datos del footer...");
+        // Corregir la URL para apuntar a la ruta correcta
+        const respuesta = await fetch("http://localhost:5000/api/nosotros/configuracion");
+        
+        if (!respuesta.ok) {
+          throw new Error('Error al cargar configuración');
+        }
+        
+        const datos = await respuesta.json();
+        console.log("Datos recibidos:", datos);
+        
+        // Verificar que la respuesta tenga la estructura esperada
+        if (datos && datos.footer) {
+          console.log("Footer encontrado:", datos.footer);
+          // Actualizar el estado con los datos del footer
+          setFooterData(datos.footer);
+        } else {
+          console.warn("No se encontró la sección footer en los datos recibidos:", datos);
+        }
+      } catch (error) {
+        console.error("Error al cargar datos del footer:", error);
+      }
+    };
+
+    cargarDatosFooter();
+  }, []);
 
   const handleOptionClick = (option) => {
     setSelectedOption(option);
     setShowModal(true);
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-  };
+  const closeModal = () => setShowModal(false);
 
-  const handleNavigation = (path) => {
-    navigate(path);
-  };
+  const handleNavigation = (path) => navigate(path);
 
   return (
     <footer style={styles.footer}>
@@ -27,125 +97,44 @@ const Footer = () => {
         <div style={styles.row}>
           {/* Sección de Políticas */}
           <div style={styles.sectionLeft}>
-            <h5 style={styles.sectionTitle}>
-              <i className="fa fa-file-text" style={styles.icon}></i> Políticas
-            </h5>
+            <h5 style={styles.sectionTitle}><i className="fa fa-file-text" style={styles.icon}></i> Políticas</h5>
             <div style={styles.horizontalList}>
-              <a
-                href="/politicas"
-                style={styles.link}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleOptionClick("Política de privacidad");
-                }}
-              >
-                <i className="fa fa-shield-alt" style={styles.icon}></i>
-                Política de privacidad
-              </a>
-              <a
-                href="/terminos"
-                style={styles.link}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleOptionClick("Términos y condiciones");
-                }}
-              >
-                <i className="fa fa-check-circle" style={styles.icon}></i>
-                Términos y condiciones
-              </a>
+              {footerData.politicas?.privacidad && (
+                <a href="#" style={styles.link} onClick={(e) => { e.preventDefault(); handleOptionClick("Política de privacidad"); }}>
+                  <i className="fa fa-shield-alt" style={styles.icon}></i>
+                  {footerData.politicas.privacidad.titulo}
+                </a>
+              )}
+              {footerData.politicas?.terminosCondiciones && (
+                <a href="#" style={styles.link} onClick={(e) => { e.preventDefault(); handleOptionClick("Términos y condiciones"); }}>
+                  <i className="fa fa-check-circle" style={styles.icon}></i>
+                  {footerData.politicas.terminosCondiciones.titulo}
+                </a>
+              )}
             </div>
           </div>
 
           {/* Sección de Redes Sociales */}
           <div style={styles.sectionCenter}>
-            <h5 style={styles.sectionTitle}>
-              <i className="fa fa-share-alt" style={styles.icon}></i> Redes Sociales
-            </h5>
+            <h5 style={styles.sectionTitle}><i className="fa fa-share-alt" style={styles.icon}></i> Redes Sociales</h5>
             <div style={styles.horizontalList}>
-              <a
-                href="https://www.facebook.com/SaboryHuellitas"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={styles.link}
-              >
-                <i className="fa fa-facebook" style={styles.icon}></i>
-                Facebook
-              </a>
-              <a
-                href="https://www.instagram.com/SaboryHuellitas100"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={styles.link}
-              >
-                <i className="fa fa-instagram" style={styles.icon}></i>
-                Instagram
-              </a>
-              <a
-                href="https://twitter.com/SaborYHuellitas"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={styles.link}
-              >
-                <i className="fa fa-twitter" style={styles.icon}></i>
-                Twitter
-              </a>
+              {footerData.redesSociales && Object.values(footerData.redesSociales).map((red, index) => (
+                <a key={index} href={red.url} target="_blank" rel="noopener noreferrer" style={styles.link}>
+                  <i className={`fa fa-${red.nombrePagina.toLowerCase()}`} style={styles.icon}></i>
+                  {red.nombrePagina}
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Nueva Sección de Soporte */}
+          {/* Sección de Soporte */}
           <div style={styles.sectionCenter}>
-            <h5 style={styles.sectionTitle}>
-              <i className="fa fa-headset" style={styles.icon}></i> Soporte
-            </h5>
+            <h5 style={styles.sectionTitle}><i className="fa fa-headset" style={styles.icon}></i> Soporte</h5>
             <div style={styles.horizontalList}>
-              <a
-                href="#"
-                style={styles.link}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavigation("/contacto");
-                }}
-              >
-                <i className="fa fa-phone-square" style={styles.icon}></i>
-                Contacto
+              <a href="#" style={styles.link} onClick={(e) => { e.preventDefault(); handleNavigation("/contacto"); }}>
+                <i className="fa fa-phone-square" style={styles.icon}></i> Contacto
               </a>
             </div>
-          </div>
-
-          {/* Sección de Misión y Visión */}
-          <div
-            style={styles.sectionRight}
-            onMouseEnter={() => setShowMenu(true)}
-            onMouseLeave={() => setShowMenu(false)}
-          >
-            <h5 style={styles.sectionTitle}>
-              <i className="fa fa-lightbulb" style={styles.icon}></i> Misión y Visión
-            </h5>
-            <div style={styles.menuIconContainer}>
-              <i className="fa fa-bullseye" style={styles.menuIcon}></i>
-            </div>
-            {showMenu && (
-              <ul style={styles.menu}>
-                <li
-                  style={styles.menuItem}
-                  onClick={() => handleOptionClick("Misión")}
-                >
-                  <i className="fa fa-flag" style={styles.menuIcon}></i> Misión
-                </li>
-                <li
-                  style={styles.menuItem}
-                  onClick={() => handleOptionClick("Visión")}
-                >
-                  <i className="fa fa-eye" style={styles.menuIcon}></i> Visión
-                </li>
-                <li
-                  style={styles.menuItem}
-                  onClick={() => handleOptionClick("Valores")}
-                >
-                  <i className="fa fa-trophy" style={styles.menuIcon}></i> Valores
-                </li>
-              </ul>
-            )}
           </div>
         </div>
       </div>
@@ -154,104 +143,21 @@ const Footer = () => {
       {showModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modal}>
-            <h3 style={styles.modalTitle}>
-              {selectedOption}
-            </h3>
+            <h3 style={styles.modalTitle}>{selectedOption}</h3>
             <div style={styles.modalContent}>
               <p style={styles.modalText}>
-                {selectedOption === "Misión" &&
-                  "Ofrecer productos y servicios de calidad para la nutrición y bienestar de las mascotas."}
-                {selectedOption === "Visión" &&
-                  "Convertirnos en la marca líder en innovación y cuidado de mascotas."}
-                {selectedOption === "Valores" && (
-                  <>
-                    <strong>Compromiso:</strong> Compromiso con el bienestar animal.
-                    <br />
-                    <strong>Innovación:</strong> Aplicación de tecnología en productos de mascotas.
-                    <br />
-                    <strong>Calidad:</strong> Productos de alta calidad y confianza.
-                  </>
-                )}
-                {selectedOption === "Política de privacidad" && (
-                  <>
-                    <strong>Política de privacidad</strong>
-                    <br />
-                    <br />
-                    <strong>Aviso de Privacidad</strong>
-                    <br />
-                    <br />
-                    <strong>Dirección:</strong>
-                    <br />
-                    Calle Chalauiayapa 123, Huejutla, Hidalgo
-                    <br />
-                    <br />
-                    Con fundamento en los artículos 15 y 16 de la Ley Federal de Protección de Datos Personales en Posesión de Particulares, hacemos de su conocimiento que <strong>SaboryHuellitas</strong> es responsable de recabar sus datos personales, del uso que se le dé a los mismos y de su protección.
-                    <br />
-                    <br />
-                    Su información personal será utilizada para las siguientes finalidades:
-                    <br />
-                    - Proveer los servicios y productos que ha solicitado.
-                    <br />
-                    - Notificarle sobre nuevos servicios o productos que tengan relación con los ya contratados o adquiridos.
-                    <br />
-                    - Comunicarle sobre cambios en los mismos.
-                    <br />
-                    - Elaborar estudios y programas que son necesarios para determinar hábitos de consumo.
-                    <br />
-                    - Realizar evaluaciones periódicas de nuestros productos y servicios a efecto de mejorar la calidad de los mismos.
-                    <br />
-                    - Evaluar la calidad del servicio que brindamos.
-                    <br />
-                    - En general, para dar cumplimiento a las obligaciones que hemos contraído con usted.
-                    <br />
-                    <br />
-                    Para las finalidades antes mencionadas, requerimos obtener los siguientes datos personales:
-                    <br />
-                    - Nombre completo
-                    <br />
-                    - Edad
-                    <br />
-                    - Sexo
-                    <br />
-                    - Teléfono fijo y/o celular
-                    <br />
-                    - Correo electrónico
-                    <br />
-                    - ID de Facebook, Twitter y/o Linkedin
-                    <br />
-                    - Dirección
-                    <br />
-                    - RFC y/o CURP
-                    <br />
-                    <br />
-                    Es importante informarle que usted tiene derecho al Acceso, Rectificación y Cancelación de sus datos personales, a Oponerse al tratamiento de los mismos o a revocar el consentimiento que para dicho fin nos haya otorgado.
-                    <br />
-                    <br />
-                    Para ello, es necesario que envíe la solicitud en los términos que marca la Ley en su Art. 29 a nuestro responsable de Protección de Datos Personales, vía correo electrónico a <strong>saboryhuellitasproyectointegra@gmail.com</strong> o al teléfono <strong>7717492349</strong>.
-                    <br />
-                    <br />
-                    En caso de que no desee recibir mensajes promocionales de nuestra parte, puede enviarnos su solicitud por medio de la dirección electrónica: <strong>saboryhuellitasproyectointegra@gmail.com</strong>.
-                    <br />
-                    <br />
-                    <strong>Redes Sociales:</strong>
-                    <br />
-                    - Facebook: <a href="https://www.facebook.com/SaboryHuellitas" target="_blank" rel="noopener noreferrer" style={{ color: "#f1c40f" }}>SaboryHuellitas</a>
-                    <br />
-                    - Instagram: <a href="https://www.instagram.com/SaboryHuellitas100" target="_blank" rel="noopener noreferrer" style={{ color: "#f1c40f" }}>SaboryHuellitas100</a>
-                    <br />
-                    - Twitter: <a href="https://twitter.com/SaborYHuellitas" target="_blank" rel="noopener noreferrer" style={{ color: "#f1c40f" }}>@SaborYHuellitas</a>
-                    <br />
-                    <br />
-                    <strong>Importante:</strong> Cualquier modificación a este Aviso de Privacidad podrá consultarlo en <a href="http://www.SaboryHuellitas.com/pages/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: "#f1c40f" }}>http://www.SaboryHuellitas.com/pages/privacidad</a>.
-                  </>
-                )}
-                {selectedOption === "Términos y condiciones" &&
-                  "Aquí van los términos y condiciones."}
+                {selectedOption === "Misión" && footerData.misionVision?.mision?.contenido}
+                {selectedOption === "Visión" && footerData.misionVision?.vision?.contenido}
+                {selectedOption === "Valores" && footerData.misionVision?.valores?.map((valor, index) => (
+                  <React.Fragment key={index}>
+                    <strong>{valor.titulo}:</strong> {valor.contenido}<br />
+                  </React.Fragment>
+                ))}
+                {selectedOption === "Política de privacidad" && footerData.politicas?.privacidad?.contenido}
+                {selectedOption === "Términos y condiciones" && footerData.politicas?.terminosCondiciones?.contenido}
               </p>
             </div>
-            <button style={styles.closeButton} onClick={closeModal}>
-              Cerrar
-            </button>
+            <button style={styles.closeButton} onClick={closeModal}>Cerrar</button>
           </div>
         </div>
       )}
