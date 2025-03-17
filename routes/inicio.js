@@ -5,7 +5,7 @@ const Inicio = require("../models/Inicio");
 // 🟢 Ruta para obtener los datos de inicio
 router.get("/", async (req, res) => {
   try {
-    const inicio = await Inicio.findOne(); // Solo devuelve un documento
+    const inicio = await Inicio.findOne(); 
     if (!inicio) {
       return res.status(404).json({ mensaje: "Información de inicio no encontrada" });
     }
@@ -14,6 +14,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ mensaje: "Error al obtener la información", error });
   }
 });
+
 
 // 🟡 Ruta para actualizar los datos de inicio
 router.put("/", async (req, res) => {

@@ -35,7 +35,7 @@ const CarouselSection = () => {
           <button style={styles.prevArrow} onClick={prevSlide}>❮</button>
           <div style={styles.slide}>
             <img 
-              src={'http://localhost:5000${slides[currentIndex].image}'} 
+              src={`http://localhost:5000${slides[currentIndex].image}`} 
               alt={slides[currentIndex].title} 
               style={styles.slideImage} 
               onError={(e) => { e.target.src = "http://localhost:5000/uploads/default.jpg"; }}

@@ -1,6 +1,30 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 const PurchaseProcess = () => {
+  const [procesoCompra, setProcesoCompra] = useState(null);
+  const [pasos, setPasos] = useState([]);
+
+  // Obtener datos de la API cuando el componente se monta
+  useEffect(() => {
+    fetch("http://localhost:5000/api/proceso_compra")
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("📌 Datos recibidos de la API:", data);
+
+        if (data && data.titulo && data.descripcion) {
+          setProcesoCompra(data);
+        }
+
+        if (data && data.pasos && Array.isArray(data.pasos)) {
+          console.log("✅ Pasos cargados correctamente:", data.pasos);
+          setPasos(data.pasos);
+        } else {
+          console.warn("⚠ 'pasos' no es un array o está ausente en los datos.");
+        }
+      })
+      .catch((error) => console.error("🚨 Error al obtener los datos:", error));
+  }, []);
+
   return (
     <>
       {/* 🔹 CSS dentro del componente sin cambios */}
@@ -64,41 +88,29 @@ const PurchaseProcess = () => {
       </style>
 
       <div className="purchase-section">
-        <h2 className="purchase-title">Proceso de compra fácil</h2>
+        {/* 🔹 Título y descripción dinámicos desde la API */}
+        <h2 className="purchase-title">
+          {procesoCompra ? procesoCompra.titulo : "Cargando..."}
+        </h2>
         <p className="purchase-subtitle">
-          Adquiere tu dispensador de forma rápida y sencilla.
+          {procesoCompra ? procesoCompra.descripcion : ""}
         </p>
 
         <div className="purchase-container">
-          {/* Tarjeta 1 */}
-          <div className="purchase-card">
-            <h3 className="purchase-card-title">Registro rápido</h3>
-            <p className="purchase-card-text">
-              Si eres un nuevo usuario, puedes registrarte en cuestión de minutos.
-              Solo necesitas proporcionar algunos datos básicos para comenzar a
-              disfrutar de nuestros servicios.
-            </p>
-          </div>
-
-          {/* Tarjeta 2 */}
-          <div className="purchase-card">
-            <h3 className="purchase-card-title">Compra directa</h3>
-            <p className="purchase-card-text">
-              Si ya tienes una cuenta, simplemente inicia sesión y serás dirigido
-              directamente a la página de pago, donde podrás completar tu compra
-              en pocos clics.
-            </p>
-          </div>
-
-          {/* Tarjeta 3 */}
-          <div className="purchase-card full-width">
-            <h3 className="purchase-card-title">Soporte al cliente</h3>
-            <p className="purchase-card-text">
-              Nuestro equipo de soporte está disponible para ayudarte en cada paso
-              del proceso de compra, asegurando que tu experiencia sea fluida y
-              sin problemas.
-            </p>
-          </div>
+          {/* 🔹 Renderización dinámica de los pasos */}
+          {pasos.length > 0 ? (
+            pasos.map((item, index) => (
+              <div 
+                key={index} 
+                className={`purchase-card ${index === pasos.length - 1 ? "full-width" : ""}`}
+              >
+                <h3 className="purchase-card-title">{item.titulo}</h3>
+                <p className="purchase-card-text">{item.descripcion}</p>
+              </div>
+            ))
+          ) : (
+            <p>Cargando pasos...</p>
+          )}
         </div>
       </div>
     </>

@@ -8,17 +8,17 @@ const AdminLayout = () => {
     <div style={styles.adminLayout}>
       {/* Header fijo en la parte superior */}
       <AdminHeader />
-
+      
       <div style={styles.adminBody}>
         {/* Sidebar fijo en el lado izquierdo */}
         <AdminSidebar />
-
+        
         {/* Contenido principal */}
         <div style={styles.adminContent}>
           <Outlet />
         </div>
       </div>
-    </div> 
+    </div>
   );
 };
 
@@ -27,25 +27,15 @@ const styles = {
   adminLayout: {
     display: "flex",
     flexDirection: "column",
-    minHeight: "100vh", // 📌 Ahora el layout ocupa toda la pantalla
-    width: "100vw",
+    minHeight: "100vh",
+    width: "100%",
     overflow: "hidden",
   },
   adminBody: {
     display: "flex",
     flex: 1,
     marginTop: "60px",
-    width: "100vw",
-  },
-  adminSidebar: {
-    width: "250px",
-    backgroundColor: "#1F2427", // Gris oscuro
-    height: "100vh",
-    position: "fixed",
-    left: 0,
-    top: "60px",
-    overflowY: "auto",
-    padding: "15px",
+    width: "100%",
   },
   adminContent: {
     flexGrow: 1,
@@ -53,9 +43,9 @@ const styles = {
     marginLeft: "250px",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "flex-start",
-    minHeight: "calc(100vh - 60px)",
-  },
+    position: "relative",
+    minHeight: "calc(100vh - 60px)", // Solo restamos la altura del header
+  }
 };
 
 export default AdminLayout;

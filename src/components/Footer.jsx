@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "font-awesome/css/font-awesome.min.css";
 
 const Footer = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // Obtener la ubicación actual
   const [showModal, setShowModal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   
-  // Estado inicial con valores por defecto más robustos
+  // Estado inicial para los datos del footer
   const [footerData, setFooterData] = useState({
     politicas: {
       privacidad: { 
@@ -52,6 +53,9 @@ const Footer = () => {
     }
   });
 
+  // Verificar si estamos en una ruta de administración - añadimos location a las dependencias
+  const isAdminRoute = location.pathname.includes('/admin');
+
   useEffect(() => {
     const cargarDatosFooter = async () => {
       try {
@@ -79,8 +83,11 @@ const Footer = () => {
       }
     };
 
-    cargarDatosFooter();
-  }, []);
+    // Solo cargar datos si no estamos en una ruta admin
+    if (!isAdminRoute) {
+      cargarDatosFooter();
+    }
+  }, [isAdminRoute, location.pathname]); // Añadimos isAdminRoute y location.pathname como dependencias
 
   const handleOptionClick = (option) => {
     setSelectedOption(option);
@@ -90,6 +97,11 @@ const Footer = () => {
   const closeModal = () => setShowModal(false);
 
   const handleNavigation = (path) => navigate(path);
+
+  // Si estamos en una ruta admin, no renderizar el footer
+  if (isAdminRoute) {
+    return null;
+  }
 
   return (
     <footer style={styles.footer}>
@@ -164,7 +176,6 @@ const Footer = () => {
     </footer>
   );
 };
-
 export default Footer;
 
 // Estilos

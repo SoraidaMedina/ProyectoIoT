@@ -36,7 +36,8 @@ const personalizacionRoutes = require("./routes/personalizacionRoutes");
 const uploadRoutes = require('./routes/uploadRoutes');
 const adminCRUDUsuariosRoutes = require("./routes/adminCRUDUsuariosRoutes");
 const tiendaCRUDRoutes = require("./routes/tiendaCRUDRoutes");
-
+const procesoCompraRoutes = require("./routes/procesoCompra");
+app.use("/api/proceso_compra", procesoCompraRoutes);
 //rutas administrador
 app.use("/api/iot", iotRoutes);
 app.use("/api/admin/usuarios", adminUsuariosRoutes);

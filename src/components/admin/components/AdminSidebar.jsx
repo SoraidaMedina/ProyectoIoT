@@ -62,13 +62,13 @@ const AdminSidebar = () => {
 const styles = {
   adminSidebar: {
     width: "250px",
-    height: "100vh",
     backgroundColor: "#1F2427", // Gris oscuro
     padding: "15px",
     overflowY: "auto",
     position: "fixed",
     left: 0,
-    top: 0,
+    top: "60px", // Posicionado debajo del header
+    bottom: 0, // Extendido hasta el fondo
     display: "flex",
     flexDirection: "column",
   },
