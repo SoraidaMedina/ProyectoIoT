@@ -39,6 +39,7 @@ import PersonalizacionPanel from "./components/Admin/components/PersonalizacionP
 import HistorialActividades from "./components/Admin/components/HistorialActividades";
 import AdminCRUDUsuarios from "./components/admin/components/AdminCRUDUsuarios";
 import AdminCRUDTienda from "./components/admin/components/AdminCRUDTienda";
+import AdminCRUDPedidos from "./components/admin/components/AdminCRUDPedidos"
 
 // Importa Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -137,6 +138,7 @@ function App() {
             <Route path="historial" element={<HistorialActividades />} />
             <Route path="crud-usuarios" element={<AdminCRUDUsuarios />} />
             <Route path="crud-tienda" element={<AdminCRUDTienda />} />
+            <Route path="crud-pedidos" element={<AdminCRUDPedidos />} />
           </Route>
         </Routes>
         <Footer />

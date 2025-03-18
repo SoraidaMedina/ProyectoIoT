@@ -37,6 +37,10 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const adminCRUDUsuariosRoutes = require("./routes/adminCRUDUsuariosRoutes");
 const tiendaCRUDRoutes = require("./routes/tiendaCRUDRoutes");
 const procesoCompraRoutes = require("./routes/procesoCompra");
+const adminPedidosRoutes = require('./routes/adminPedidosRoutes');
+// Elimina esta línea duplicada: const pedidosRoutes = require('./routes/pedidosRoutes');
+
+
 app.use("/api/proceso_compra", procesoCompraRoutes);
 //rutas administrador
 app.use("/api/iot", iotRoutes);
@@ -49,6 +53,7 @@ app.use('/uploads', express.static('public/uploads'));
 app.use('/api/upload', uploadRoutes);
 app.use("/api/admin/crud/usuarios", adminCRUDUsuariosRoutes);
 app.use("/api/admin/crud/tienda", tiendaCRUDRoutes);
+app.use("/api/admin/pedidos", adminPedidosRoutes);
 
 // Usar rutas existentes
 app.use("/api/tienda", tiendaRoutes);

@@ -14,8 +14,6 @@ const AdminSidebar = () => {
         <li>
           <strong style={styles.sectionTitle}>Usuarios</strong>
           <ul>
-            <li><Link to="/admin/buscar-usuario" style={styles.sidebarLink}>🔍 Buscar Usuario</Link></li>
-            <li><Link to="/admin/lista-usuario" style={styles.sidebarLink}>📋 Lista de Usuarios</Link></li>
             <li><Link to="/admin/crud-usuarios" style={styles.sidebarLink}>✏️ Administrar Usuarios</Link></li>
           </ul>
         </li>
@@ -25,23 +23,7 @@ const AdminSidebar = () => {
           <strong style={styles.sectionTitle}>Tienda</strong>
           <ul>
             <li><Link to="/admin/crud-tienda" style={styles.sidebarLink}>🛒 Administrar Productos</Link></li>
-          </ul>
-        </li>
-
-        {/* Dispositivos IoT */}
-        <li>
-          <strong style={styles.sectionTitle}>Dispositivos IoT</strong>
-          <ul>
-            <li><Link to="/admin/Buscar-iot" style={styles.sidebarLink}>📡 Buscar IoT</Link></li>
-            <li><Link to="/admin/listado-iot" style={styles.sidebarLink}>📡 Listado de IoT</Link></li>
-          </ul>
-        </li>
-
-        {/* Reportes */}
-        <li>
-          <strong style={styles.sectionTitle}>Reportes</strong>
-          <ul>
-            <li><Link to="/admin/historial" style={styles.sidebarLink}>📊 Historial de Actividades</Link></li>
+            <li><Link to="/admin/crud-pedidos" style={styles.sidebarLink}>📦 Administrar Pedidos</Link></li>
           </ul>
         </li>
 
@@ -50,7 +32,6 @@ const AdminSidebar = () => {
           <strong style={styles.sectionTitle}>Configuración</strong>
           <ul>
             <li><Link to="/admin/configuracion-datos" style={styles.sidebarLink}>⚙️ Configuración de Datos</Link></li>
-            <li><Link to="/admin/personalizacion-panel" style={styles.sidebarLink}>🎨 Personalización</Link></li>
           </ul>
         </li>
       </ul>
