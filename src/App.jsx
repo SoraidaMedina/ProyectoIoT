@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
 import { UserProvider, useUserContext } from "./context/UserContext";
+import { CartProvider } from "./context/CartContext"; // Importamos CartProvider
 
 // Importa tus componentes aquí...
 import SubirImagen from "./components/SubirImagen";
@@ -47,123 +48,125 @@ import "bootstrap/dist/css/bootstrap.min.css";
 function App() {
   return (
     <UserProvider> {/* Envuelve toda la aplicación con UserProvider */}
-      <Router>
-        <NavigationBar /> {/* NavigationBar ya no necesita props */}
+      <CartProvider> {/* Añadimos CartProvider para manejar el estado del carrito */}
+        <Router>
+          <NavigationBar /> {/* NavigationBar ya no necesita props */}
 
-        <Routes>
-          {/* Página principal */}
-          <Route
-            path="/"
-            element={
-              <>
-                <Hero />
-                <InfoSection />
-                <CarouselSection />
-                <PurchaseProcess />
-              </>
-            }
-          />
+          <Routes>
+            {/* Página principal */}
+            <Route
+              path="/"
+              element={
+                <>
+                  <Hero />
+                  <InfoSection />
+                  <CarouselSection />
+                  <PurchaseProcess />
+                </>
+              }
+            />
 
-          {/* Rutas públicas */}
-          <Route path="/tienda" element={<Tienda />} />
-          <Route path="/confirmacion/:id" element={<ConfirmacionPedido />} />
-          <Route path="/nosotros" element={<Nosotros />} />
-          <Route path="/subir-imagen" element={<SubirImagen />} />
-          <Route path="/contacto" element={<Contact />} />
-          <Route path="/politicas" element={<Politicas />} />
-          <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
-          <Route path="/testimonios" element={<Testimonios />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/recuperar-contraseña" element={<RecuperarContrasena />} />
-          <Route path="/register" element={<Register />} />
+            {/* Rutas públicas */}
+            <Route path="/tienda" element={<Tienda />} />
+            <Route path="/confirmacion/:id" element={<ConfirmacionPedido />} />
+            <Route path="/nosotros" element={<Nosotros />} />
+            <Route path="/subir-imagen" element={<SubirImagen />} />
+            <Route path="/contacto" element={<Contact />} />
+            <Route path="/politicas" element={<Politicas />} />
+            <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
+            <Route path="/testimonios" element={<Testimonios />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/recuperar-contraseña" element={<RecuperarContrasena />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Rutas protegidas (solo accesibles si el usuario está autenticado) */}
-          <Route
-            path="/cliente"
-            element={
-              <ProtectedRoute>
-                <Cliente />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/perfil-mascota"
-            element={
-              <ProtectedRoute>
-                <PerfilMascota />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/Estado-Dispensador"
-            element={
-              <ProtectedRoute>
-                <EstadoDispensador />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/configuracion-dispensador"
-            element={
-              <ProtectedRoute>
-                <ConfiguracionDispensador />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/perfil-usuario"
-            element={
-              <ProtectedRoute>
-                <PerfilPage />
-              </ProtectedRoute>
-            }
-          />
+            {/* Rutas protegidas (solo accesibles si el usuario está autenticado) */}
+            <Route
+              path="/cliente"
+              element={
+                <ProtectedRoute>
+                  <Cliente />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/perfil-mascota"
+              element={
+                <ProtectedRoute>
+                  <PerfilMascota />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/Estado-Dispensador"
+              element={
+                <ProtectedRoute>
+                  <EstadoDispensador />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracion-dispensador"
+              element={
+                <ProtectedRoute>
+                  <ConfiguracionDispensador />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/perfil-usuario"
+              element={
+                <ProtectedRoute>
+                  <PerfilPage />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* 🔹 Rutas del Admin (protegidas y solo accesibles para administradores) */}
-          <Route
-            path="/admin"
-            element={
-              <AdminProtectedRoute>
-                <AdminLayout />
-              </AdminProtectedRoute>
-            }
+            {/* 🔹 Rutas del Admin (protegidas y solo accesibles para administradores) */}
+            <Route
+              path="/admin"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout />
+                </AdminProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="buscar-usuario" element={<BuscarUsuario />} />
+              <Route path="lista-usuario" element={<ListaUsuarios />} />
+              <Route path="buscar-iot" element={<BuscarIoT />} />
+              <Route path="listado-iot" element={<ListaIots />} />
+              <Route path="configuracion-datos" element={<ConfiguracionDatos />} />
+              <Route path="personalizacion-panel" element={<PersonalizacionPanel />} />
+              <Route path="historial" element={<HistorialActividades />} />
+              <Route path="crud-usuarios" element={<AdminCRUDUsuarios />} />
+              <Route path="crud-tienda" element={<AdminCRUDTienda />} />
+              <Route path="crud-pedidos" element={<AdminCRUDPedidos />} />
+            </Route>
+          </Routes>
+          <Footer />
+
+          {/* Ícono flotante de WhatsApp */}
+          <a
+            href="https://wa.me/7717492349"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              right: "20px",
+              backgroundColor: "#25D366",
+              borderRadius: "50%",
+              padding: "15px",
+              boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
+              transition: "transform 0.3s ease",
+              zIndex: 9999,
+            }}
+            className="whatsapp-icon"
           >
-            <Route index element={<Dashboard />} />
-            <Route path="buscar-usuario" element={<BuscarUsuario />} />
-            <Route path="lista-usuario" element={<ListaUsuarios />} />
-            <Route path="buscar-iot" element={<BuscarIoT />} />
-            <Route path="listado-iot" element={<ListaIots />} />
-            <Route path="configuracion-datos" element={<ConfiguracionDatos />} />
-            <Route path="personalizacion-panel" element={<PersonalizacionPanel />} />
-            <Route path="historial" element={<HistorialActividades />} />
-            <Route path="crud-usuarios" element={<AdminCRUDUsuarios />} />
-            <Route path="crud-tienda" element={<AdminCRUDTienda />} />
-            <Route path="crud-pedidos" element={<AdminCRUDPedidos />} />
-          </Route>
-        </Routes>
-        <Footer />
-
-        {/* Ícono flotante de WhatsApp */}
-        <a
-          href="https://wa.me/7717492349"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            backgroundColor: "#25D366",
-            borderRadius: "50%",
-            padding: "15px",
-            boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)",
-            transition: "transform 0.3s ease",
-            zIndex: 9999,
-          }}
-          className="whatsapp-icon"
-        >
-          <FaWhatsapp size={50} style={{ color: "white", fontSize: "30px" }} />
-        </a>
-      </Router>
+            <FaWhatsapp size={50} style={{ color: "white", fontSize: "30px" }} />
+          </a>
+        </Router>
+      </CartProvider>
     </UserProvider>
   );
 }

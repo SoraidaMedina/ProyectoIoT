@@ -2,10 +2,25 @@ import React, { useEffect, useState, useRef } from "react";
 import { FaInfoCircle, FaTruck, FaStar, FaTimes, FaArrowLeft, FaArrowRight, FaSearch, FaFilter, FaShoppingCart, FaTrash, FaCheckCircle, FaUser } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import { useUserContext } from "../context/UserContext"; // Importamos el contexto de usuario
+import { useCartContext } from "../context/CartContext"; // Importamos el contexto del carrito
+import CartComponent from "./CartComponent"; // Importamos el componente del carrito
 
 const Tienda = () => {
   const navigate = useNavigate();
   const { user } = useUserContext(); // Obtenemos el usuario actual
+  
+  // Usamos el contexto del carrito en lugar de estados locales
+  const { 
+    carrito, 
+    carritoAbierto, 
+    setCarritoAbierto,
+    toggleCarrito, 
+    agregarAlCarrito, 
+    eliminarDelCarrito, 
+    cambiarCantidad,
+    calcularTotal,
+  } = useCartContext();
+  
   const [productos, setProductos] = useState([]);
   const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,9 +31,7 @@ const Tienda = () => {
   const [busqueda, setBusqueda] = useState("");
   const [categorias, setCategorias] = useState([]);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("todas");
-  // Estados para el carrito
-  const [carrito, setCarrito] = useState([]);
-  const [carritoAbierto, setCarritoAbierto] = useState(false);
+  // Mantenemos estos estados locales para el checkout
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
   const [notificacion, setNotificacion] = useState({ visible: false, mensaje: "", tipo: "" });
   const [procesandoPedido, setProcesandoPedido] = useState(false);
@@ -32,7 +45,6 @@ const Tienda = () => {
   });
   
   // Referencias para cerrar modales al hacer clic fuera
-  const carritoRef = useRef(null);
   const checkoutRef = useRef(null);
 
   // Llenar automáticamente los datos de envío cuando hay un usuario logueado
@@ -114,13 +126,9 @@ const Tienda = () => {
     setPaginaActual(1); // Volver a la primera página al cambiar filtros
   }, [busqueda, categoriaSeleccionada, productos]);
 
-  // Cerrar modales al hacer clic fuera
+  // Cerrar modal de checkout al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (carritoAbierto && carritoRef.current && !carritoRef.current.contains(event.target)) {
-        setCarritoAbierto(false);
-      }
-      
       if (checkoutAbierto && checkoutRef.current && !checkoutRef.current.contains(event.target)) {
         setCheckoutAbierto(false);
       }
@@ -130,7 +138,7 @@ const Tienda = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [carritoAbierto, checkoutAbierto]);
+  }, [checkoutAbierto]);
 
   // Mostrar notificación con temporizador para ocultarla
   const mostrarNotificacion = (mensaje, tipo = "success") => {
@@ -162,76 +170,6 @@ const Tienda = () => {
     setProductoSeleccionado(null);
   };
 
-  // Funciones del carrito
-  const toggleCarrito = () => {
-    setCarritoAbierto(!carritoAbierto);
-    setCheckoutAbierto(false); // Cerrar checkout si está abierto
-  };
-
-  // Función para añadir un producto al carrito
-  const agregarAlCarrito = (producto, cantidad = 1) => {
-    const productoEnCarrito = carrito.find(item => item._id === producto._id);
-    
-    if (productoEnCarrito) {
-      // Si ya existe, aumenta la cantidad
-      setCarrito(
-        carrito.map(item => 
-          item._id === producto._id 
-            ? { ...item, cantidad: item.cantidad + cantidad } 
-            : item
-        )
-      );
-    } else {
-      // Si no existe, añádelo con cantidad 1
-      setCarrito([...carrito, { ...producto, cantidad }]);
-    }
-    
-    // Muestra notificación en lugar de alerta
-    mostrarNotificacion(`${producto.nombre} añadido al carrito`);
-    
-    // Abre automáticamente el carrito temporalmente
-    setCarritoAbierto(true);
-    
-    // Opcional: cierra automáticamente el carrito después de unos segundos
-    setTimeout(() => {
-      setCarritoAbierto(false);
-    }, 3000);
-  };
-
-  // Función para eliminar un producto del carrito
-  const eliminarDelCarrito = (id) => {
-    setCarrito(carrito.filter(item => item._id !== id));
-  };
-
-  // Función para modificar la cantidad de un producto
-  const cambiarCantidad = (id, nuevaCantidad) => {
-    if (nuevaCantidad <= 0) {
-      eliminarDelCarrito(id);
-    } else {
-      setCarrito(
-        carrito.map(item => 
-          item._id === id 
-            ? { ...item, cantidad: nuevaCantidad } 
-            : item
-        )
-      );
-    }
-  };
-
-  // Función para calcular el total del carrito
-  const calcularTotal = () => {
-    let total = carrito.reduce((total, item) => {
-      return total + (item.precio * item.cantidad);
-    }, 0);
-    
-    // Añadir costo de envío si es express
-    if (datosEnvio.metodoEnvio === "express") {
-      total += 5; // 5 EUR adicionales por envío express
-    }
-    
-    return total.toFixed(2);
-  };
-
   // Función para abrir el checkout
   const abrirCheckout = () => {
     if (carrito.length === 0) {
@@ -242,6 +180,9 @@ const Tienda = () => {
     setCheckoutAbierto(true);
     setCarritoAbierto(false);
   };
+  
+  // Hacemos la función accesible desde fuera del componente para el botón del carrito
+  window.abrirCheckout = abrirCheckout;
 
   // Manejar cambios en el formulario de checkout
   const handleInputChange = (e) => {
@@ -294,8 +235,10 @@ const Tienda = () => {
         // Mostrar notificación de éxito
         mostrarNotificacion(`¡Pedido realizado con éxito! Referencia: ${data.pedido.numeroReferencia}`);
         
-        // Vaciar carrito
-        setCarrito([]);
+        // Vaciar carrito - Usamos la función del contexto global
+        // Aquí necesitaríamos acceder a la función vaciarCarrito del contexto
+        // Por ahora, podemos simplemente limpiar los productos uno a uno
+        carrito.forEach(item => eliminarDelCarrito(item._id));
         
         // Cerrar checkout y resetear datos
         setCheckoutAbierto(false);
@@ -357,6 +300,9 @@ const Tienda = () => {
 
   return (
     <div style={styles.body}>
+      {/* Componente de carrito flotante */}
+      <CartComponent />
+      
       {/* Notificación flotante */}
       {notificacion.visible && (
         <div style={{
@@ -370,19 +316,9 @@ const Tienda = () => {
       )}
       
       <div style={styles.tiendaContainer}>
-        {/* Header con título y carrito */}
+        {/* Header con título */}
         <div style={styles.barraNavegacion}>
           <h2 style={styles.tituloTienda}>🐾 Nuestra Tienda 🐾</h2>
-          
-          {/* Icono del carrito con contador */}
-          <div onClick={toggleCarrito} style={styles.iconoCarrito}>
-            <FaShoppingCart style={styles.carrito} />
-            {carrito.length > 0 && (
-              <span style={styles.contadorCarrito}>
-                {carrito.reduce((total, item) => total + item.cantidad, 0)}
-              </span>
-            )}
-          </div>
         </div>
         
         {/* Barra de búsqueda y filtros */}
@@ -482,6 +418,8 @@ const Tienda = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     agregarAlCarrito(producto);
+                    // Mostramos notificación usando la función local
+                    mostrarNotificacion(`${producto.nombre} añadido al carrito`);
                   }}
                 >
                   <FaShoppingCart style={{ marginRight: "5px" }} /> Añadir al Carrito
@@ -577,85 +515,12 @@ const Tienda = () => {
               style={styles.btnAgregar}
               onClick={() => {
                 agregarAlCarrito(productoSeleccionado);
+                mostrarNotificacion(`${productoSeleccionado.nombre} añadido al carrito`);
                 cerrarModal();
               }}
             >
               <FaShoppingCart style={{ marginRight: "5px" }} /> Añadir al Carrito
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Carrito de compras (se muestra con efecto slide-in desde la derecha) */}
-      {carritoAbierto && (
-        <div style={styles.carritoOverlay}>
-          <div ref={carritoRef} style={styles.carritoPanel}>
-            <div style={styles.carritoHeader}>
-              <h2 style={styles.carritoTitulo}>Tu Carrito</h2>
-              <button style={styles.cerrarCarrito} onClick={() => setCarritoAbierto(false)}>
-                <FaTimes />
-              </button>
-            </div>
-
-            {carrito.length === 0 ? (
-              <div style={styles.carritoVacio}>
-                <p>Tu carrito está vacío</p>
-                <p style={styles.carritoVacioSubtexto}>Añade productos para comenzar</p>
-              </div>
-            ) : (
-              <>
-                <div style={styles.carritoItems}>
-                  {carrito.map((item) => (
-                    <div key={item._id} style={styles.carritoItem}>
-                      {/* Imagen del producto en carrito - ACTUALIZADA PARA CLOUDINARY */}
-                      <img 
-                        src={getImageUrl(item)}
-                        alt={item.nombre}
-                        style={styles.carritoItemImagen}
-                        onError={(e) => { 
-                          e.target.src = "https://res.cloudinary.com/dozphinph/image/upload/v1710777777/products/default-product_abcdef.jpg"; 
-                        }}
-                      />
-                      
-                      <div style={styles.carritoItemInfo}>
-                        <h4 style={styles.carritoItemNombre}>{item.nombre}</h4>
-                        <p style={styles.carritoItemPrecio}>{item.precio} EUR</p>
-                      </div>
-                      
-                      <div style={styles.carritoItemCantidad}>
-                        <button 
-                          style={styles.btnCantidad}
-                          onClick={() => cambiarCantidad(item._id, item.cantidad - 1)}
-                        >-</button>
-                        <span style={styles.cantidadNumero}>{item.cantidad}</span>
-                        <button 
-                          style={styles.btnCantidad}
-                          onClick={() => cambiarCantidad(item._id, item.cantidad + 1)}
-                        >+</button>
-                      </div>
-                      
-                      <button
-                        style={styles.btnEliminar}
-                        onClick={() => eliminarDelCarrito(item._id)}
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                
-                <div style={styles.carritoFooter}>
-                  <div style={styles.carritoTotal}>
-                    <span style={styles.carritoTotalTexto}>Total:</span>
-                    <span style={styles.carritoTotalPrecio}>{calcularTotal()} EUR</span>
-                  </div>
-                  
-                  <button style={styles.btnCheckout} onClick={abrirCheckout}>
-                    Realizar Pedido
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -697,7 +562,9 @@ const Tienda = () => {
                   
                   <div style={styles.resumenTotal}>
                     <span style={styles.resumenTotalTexto}>Total:</span>
-                    <span style={styles.resumenTotalPrecio}>{calcularTotal()} EUR</span>
+                    <span style={styles.resumenTotalPrecio}>
+                      {calcularTotal(datosEnvio.metodoEnvio === "express" ? 5 : 0)} EUR
+                    </span>
                   </div>
                 </div>
               </div>
@@ -870,6 +737,7 @@ const Tienda = () => {
                   )}
                   
                   <button 
+                    id="btn-checkout"
                     type="submit" 
                     style={{
                       ...styles.btnConfirmarPedido,
@@ -961,34 +829,6 @@ const styles = {
     fontSize: "2.2rem",
     textTransform: "uppercase",
     margin: 0,
-  },
-
-  /* ======= Icono del carrito ======= */
-  iconoCarrito: {
-    position: "relative",
-    cursor: "pointer",
-    fontSize: "1.8rem",
-    color: "#1f2427",
-  },
-
-  carrito: {
-    fontSize: "1.8rem",
-  },
-
-  contadorCarrito: {
-    position: "absolute",
-    top: "-10px",
-    right: "-10px",
-    backgroundColor: "#ff6b6b",
-    color: "white",
-    borderRadius: "50%",
-    width: "22px",
-    height: "22px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "0.8rem",
-    fontWeight: "bold",
   },
 
   /* ======= Barra de búsqueda y filtros ======= */
@@ -1347,178 +1187,6 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     marginBottom: "20px",
-  },
-
-  /* ======= Carrito Panel Lateral ======= */
-  carritoOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    justifyContent: "flex-end",
-    zIndex: 1000,
-    animation: "fadeIn 0.3s ease-out",
-  },
-
-  carritoPanel: {
-    width: "400px",
-    maxWidth: "90%",
-    height: "100%",
-    backgroundColor: "#FFF2DB",
-    boxShadow: "-5px 0 15px rgba(0, 0, 0, 0.1)",
-    display: "flex",
-    flexDirection: "column",
-    animation: "slideInRight 0.3s ease-out",
-  },
-
-  carritoHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px",
-    borderBottom: "1px solid #e0e0e0",
-  },
-
-  carritoTitulo: {
-    fontSize: "1.5rem",
-    fontWeight: "bold",
-    margin: 0,
-  },
-
-  cerrarCarrito: {
-    background: "none",
-    border: "none",
-    fontSize: "1.2rem",
-    cursor: "pointer",
-    color: "#666",
-  },
-
-  carritoVacio: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    height: "50%",
-    textAlign: "center",
-  },
-
-  carritoVacioSubtexto: {
-    color: "#888",
-    marginTop: "10px",
-  },
-
-  carritoItems: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "20px",
-  },
-
-  carritoItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "15px 0",
-    borderBottom: "1px solid #eee",
-  },
-
-  carritoItemImagen: {
-    width: "60px",
-    height: "60px",
-    objectFit: "cover",
-    borderRadius: "8px",
-    marginRight: "15px",
-  },
-
-  carritoItemInfo: {
-    flex: 1,
-  },
-
-  carritoItemNombre: {
-    fontSize: "1rem",
-    fontWeight: "bold",
-    margin: "0 0 5px 0",
-  },
-
-  carritoItemPrecio: {
-    fontSize: "0.9rem",
-    color: "#666",
-    margin: 0,
-  },
-
-  carritoItemCantidad: {
-    display: "flex",
-    alignItems: "center",
-    margin: "0 15px",
-  },
-
-  btnCantidad: {
-    width: "25px",
-    height: "25px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#f0f0f0",
-    border: "none",
-    borderRadius: "50%",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "16px",
-  },
-
-  cantidadNumero: {
-    margin: "0 10px",
-    fontWeight: "bold",
-  },
-
-  btnEliminar: {
-    background: "none",
-    border: "none",
-    color: "#ff6b6b",
-    cursor: "pointer",
-    fontSize: "16px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "5px",
-  },
-
-  carritoFooter: {
-    padding: "20px",
-    borderTop: "1px solid #e0e0e0",
-  },
-
-  carritoTotal: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-
-  carritoTotalTexto: {
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-  },
-
-  carritoTotalPrecio: {
-    fontSize: "1.3rem",
-    fontWeight: "bold",
-    color: "#1f2427",
-  },
-
-  btnCheckout: {
-    width: "100%",
-    padding: "15px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "1rem",
-    fontWeight: "bold",
-    cursor: "pointer",
-    transition: "background-color 0.2s ease",
   },
 
   /* ======= Modal Checkout ======= */
