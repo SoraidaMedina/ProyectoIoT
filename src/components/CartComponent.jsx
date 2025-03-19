@@ -1,10 +1,12 @@
 import React, { useRef, useEffect } from "react";
 import { FaShoppingCart, FaTimes, FaTrash, FaArrowLeft } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCartContext } from "../context/CartContext";
 
 // Este componente solo se usará en la página de Tienda
 const CartComponent = ({ showButton = true }) => {
+  const navigate = useNavigate(); // Hook para navegación
+  
   const { 
     carrito, 
     carritoAbierto, 
@@ -55,6 +57,37 @@ const CartComponent = ({ showButton = true }) => {
     };
   }, [carritoAbierto, setCarritoAbierto]);
 
+  // Función para manejar el botón "Seguir Comprando"
+  const handleSeguirComprando = () => {
+    // Cerrar el panel del carrito
+    setCarritoAbierto(false);
+    
+    // Opcional: Hacer scroll a la sección de productos
+    const productosGrid = document.querySelector("[style*='productosGrid']");
+    if (productosGrid) {
+      productosGrid.scrollIntoView({ behavior: "smooth" });
+    }
+    
+    // Mostrar notificación
+    if (window.mostrarNotificacion) {
+      window.mostrarNotificacion("Continúa explorando nuestros productos", "info");
+    }
+  };
+
+  // Función para abrir el checkout
+  const abrirCheckoutDesdeCarrito = () => {
+    // Cerrar el panel del carrito
+    setCarritoAbierto(false);
+    
+    // Usar la función global definida en Tienda.jsx
+    // Para evitar problemas de timing, usamos setTimeout
+    setTimeout(() => {
+      if (window.abrirCheckout) {
+        window.abrirCheckout();
+      }
+    }, 300);
+  };
+
   return (
     <>
       {/* Botón flotante del carrito */}
@@ -85,7 +118,7 @@ const CartComponent = ({ showButton = true }) => {
                 <p style={{fontSize: "18px", fontWeight: "bold"}}>Tu carrito está vacío</p>
                 <p style={styles.carritoVacioSubtexto}>Añade productos a tu carrito para comenzar a comprar</p>
                 <button 
-                  onClick={() => setCarritoAbierto(false)} 
+                  onClick={handleSeguirComprando} 
                   style={styles.btnSeguirComprando}
                 >
                   <FaArrowLeft style={{marginRight: "8px"}} /> Volver a la tienda
@@ -141,26 +174,14 @@ const CartComponent = ({ showButton = true }) => {
                   
                   <button 
                     style={styles.btnSeguirComprando}
-                    onClick={() => setCarritoAbierto(false)}
+                    onClick={handleSeguirComprando}
                   >
                     Seguir Comprando
                   </button>
                   
                   <button 
                     style={styles.btnFinalizarCompra}
-                    onClick={() => {
-                      // Cerrar el panel del carrito
-                      setCarritoAbierto(false);
-                      
-                      // Usar setTimeout para dar tiempo a que se cierre el panel antes de abrir el checkout
-                      setTimeout(() => {
-                        // Intentar encontrar y hacer clic en el botón "Realizar Pedido" si existe
-                        const checkoutBtn = document.getElementById("btn-checkout");
-                        if (checkoutBtn) {
-                          checkoutBtn.click();
-                        }
-                      }, 300);
-                    }}
+                    onClick={abrirCheckoutDesdeCarrito}
                   >
                     Finalizar Compra
                   </button>

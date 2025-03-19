@@ -147,6 +147,9 @@ const Tienda = () => {
       setNotificacion({ visible: false, mensaje: "", tipo: "" });
     }, 3000);
   };
+  
+  // Hacemos la función accesible desde fuera del componente
+  window.mostrarNotificacion = mostrarNotificacion;
 
   // Función para manejar la búsqueda
   const manejarBusqueda = (e) => {
@@ -181,7 +184,8 @@ const Tienda = () => {
     setCarritoAbierto(false);
   };
   
-  // Hacemos la función accesible desde fuera del componente para el botón del carrito
+  // IMPORTANTE: Hacemos la función accesible desde fuera del componente
+  // Esta línea es clave para que el botón "Finalizar Compra" del CartComponent funcione
   window.abrirCheckout = abrirCheckout;
 
   // Manejar cambios en el formulario de checkout

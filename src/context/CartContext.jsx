@@ -10,6 +10,7 @@ export const CartProvider = ({ children }) => {
   // Estados del carrito
   const [carrito, setCarrito] = useState([]);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const [checkoutAbierto, setCheckoutAbierto] = useState(false);
   
   // Recuperar carrito del localStorage al cargar la página
   useEffect(() => {
@@ -91,19 +92,32 @@ export const CartProvider = ({ children }) => {
   const getCantidadTotal = () => {
     return carrito.reduce((total, item) => total + item.cantidad, 0);
   };
+  
+  // Función para abrir el checkout desde cualquier componente
+  const abrirCheckout = () => {
+    if (carrito.length === 0) {
+      // Aquí podrías mostrar una notificación, pero necesitarías tenerla en el contexto
+      return;
+    }
+    setCheckoutAbierto(true);
+    setCarritoAbierto(false);
+  };
 
   // Valor del contexto que será proporcionado
   const value = {
     carrito,
     carritoAbierto,
     setCarritoAbierto,
+    checkoutAbierto,
+    setCheckoutAbierto,
     toggleCarrito,
     agregarAlCarrito,
     eliminarDelCarrito,
     cambiarCantidad,
     calcularTotal,
     vaciarCarrito,
-    getCantidadTotal
+    getCantidadTotal,
+    abrirCheckout
   };
 
   return (
