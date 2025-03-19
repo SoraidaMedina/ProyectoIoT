@@ -10,6 +10,8 @@ const AdminCRUDTienda = () => {
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [productoEditando, setProductoEditando] = useState(null);
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [productoExpandido, setProductoExpandido] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
@@ -235,6 +237,7 @@ const AdminCRUDTienda = () => {
             categoria: ""
           });
           setPreviewImage(null);
+          setMostrarFormulario(false);
           cargarProductos();
         }
       })
@@ -248,6 +251,7 @@ const AdminCRUDTienda = () => {
   const prepararEdicion = (producto) => {
     setProductoEditando(producto._id);
     setModoEdicion(true);
+    setMostrarFormulario(true);
     setFormData({
       nombre: producto.nombre,
       descripcion: producto.descripcion,
@@ -307,6 +311,7 @@ const AdminCRUDTienda = () => {
             categoria: ""
           });
           setPreviewImage(null);
+          setMostrarFormulario(false);
           cargarProductos();
         }
       })
@@ -346,6 +351,7 @@ const AdminCRUDTienda = () => {
             setMensajeError(data.error);
           } else {
             setMensajeExito("Producto eliminado correctamente");
+            setProductoExpandido(null);
             cargarProductos();
           }
         })
@@ -369,6 +375,16 @@ const AdminCRUDTienda = () => {
       categoria: ""
     });
     setPreviewImage(null);
+    setMostrarFormulario(false);
+  };
+
+  // Función para expandir/contraer detalles de un producto
+  const toggleExpandirProducto = (id) => {
+    if (productoExpandido === id) {
+      setProductoExpandido(null);
+    } else {
+      setProductoExpandido(id);
+    }
   };
 
   // Formatear precio para mostrarlo con 2 decimales
@@ -402,12 +418,27 @@ const AdminCRUDTienda = () => {
       )}
 
       <div style={styles.content}>
+        {/* Botón para mostrar/ocultar formulario de agregar nuevo producto */}
+        <div style={styles.actionBar}>
+          <button 
+            onClick={() => {
+              setMostrarFormulario(!mostrarFormulario);
+              if (modoEdicion) {
+                cancelarEdicion();
+              }
+            }} 
+            style={mostrarFormulario ? styles.btnSecondary : styles.btnPrimary}
+          >
+            {mostrarFormulario ? "Cancelar" : "➕ Agregar Nuevo Producto"}
+          </button>
+        </div>
+
         {/* Formulario de búsqueda */}
         <div style={styles.card}>
           <h2>🔍 Buscar Productos</h2>
-          <form onSubmit={filtrarProductos} style={styles.form}>
+          <form onSubmit={filtrarProductos} style={styles.formRow}>
             <div style={styles.formGroup}>
-              <label htmlFor="filtroNombre">Nombre del producto:</label>
+              <label htmlFor="filtroNombre">Nombre:</label>
               <input
                 type="text"
                 id="filtroNombre"
@@ -450,192 +481,250 @@ const AdminCRUDTienda = () => {
           </form>
         </div>
 
-        {/* Formulario para agregar/editar producto */}
-        <div style={styles.card}>
-          <h2>{modoEdicion ? "✏️ Editar Producto" : "➕ Agregar Nuevo Producto"}</h2>
-          <form
-            onSubmit={modoEdicion ? actualizarProducto : agregarProducto}
-            style={styles.form}
-          >
-            <div style={styles.formGroup}>
-              <label htmlFor="nombre">Nombre:</label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleInputChange}
-                style={styles.input}
-                placeholder="Nombre del producto"
-                required
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="descripcion">Descripción:</label>
-              <textarea
-                id="descripcion"
-                name="descripcion"
-                value={formData.descripcion}
-                onChange={handleInputChange}
-                style={{...styles.input, height: '100px'}}
-                placeholder="Descripción del producto"
-                required
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="precio">Precio:</label>
-              <input
-                type="text"
-                id="precio"
-                name="precio"
-                value={formData.precio}
-                onChange={handleInputChange}
-                style={styles.input}
-                placeholder="Precio (ejemplo: 99.99)"
-                required
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="categoria">Categoría:</label>
-              <select
-                id="categoria"
-                name="categoria"
-                value={formData.categoria}
-                onChange={handleInputChange}
-                style={styles.input}
-                required
-              >
-                <option value="">Seleccione una categoría</option>
-                {categorias.map((categoria) => (
-                  <option key={categoria} value={categoria}>
-                    {categoria.charAt(0).toUpperCase() + categoria.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="imagen">Imagen:</label>
-              <input
-                type="file"
-                id="imagen"
-                name="imagen"
-                onChange={handleImageUpload}
-                style={styles.input}
-                accept="image/*"
-                disabled={uploadingImage}
-              />
-              {uploadingImage && (
-                <div style={styles.uploadingMessage}>
-                  Subiendo imagen a Cloudinary...
-                </div>
-              )}
-              {previewImage && (
-                <div style={styles.imagePreview}>
-                  <img 
-                    src={previewImage} 
-                    alt="Vista previa" 
-                    style={styles.previewImg}
+        {/* Formulario para agregar/editar producto (condicional) */}
+        {mostrarFormulario && (
+          <div style={styles.card}>
+            <h2>{modoEdicion ? "✏️ Editar Producto" : "➕ Agregar Nuevo Producto"}</h2>
+            <form
+              onSubmit={modoEdicion ? actualizarProducto : agregarProducto}
+              style={styles.form}
+            >
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label htmlFor="nombre">Nombre:</label>
+                  <input
+                    type="text"
+                    id="nombre"
+                    name="nombre"
+                    value={formData.nombre}
+                    onChange={handleInputChange}
+                    style={styles.input}
+                    placeholder="Nombre del producto"
+                    required
                   />
                 </div>
-              )}
-              <input
-                type="text"
-                name="imagenUrl"
-                value={formData.imagenUrl}
-                onChange={handleInputChange}
-                style={styles.input}
-                placeholder="O ingrese la URL de la imagen directamente"
-              />
-              {/* Campo oculto para el ID de Cloudinary */}
-              <input
-                type="hidden"
-                name="imagenPublicId"
-                value={formData.imagenPublicId}
-              />
-            </div>
 
-            <div style={styles.buttonGroup}>
-              <button 
-                type="submit" 
-                style={styles.btnPrimary}
-                disabled={uploadingImage}
-              >
-                {modoEdicion ? "Actualizar" : "Agregar"}
-              </button>
-              {modoEdicion && (
-                <button
-                  type="button"
-                  onClick={cancelarEdicion}
-                  style={styles.btnSecondary}
-                  disabled={uploadingImage}
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
+                <div style={styles.formGroup}>
+                  <label htmlFor="precio">Precio:</label>
+                  <input
+                    type="text"
+                    id="precio"
+                    name="precio"
+                    value={formData.precio}
+                    onChange={handleInputChange}
+                    style={styles.input}
+                    placeholder="Precio (ejemplo: 99.99)"
+                    required
+                  />
+                </div>
 
-        {/* Listado de productos */}
-        <div style={styles.card}>
-          <h2>📋 Lista de Productos</h2>
-          <div style={styles.productGrid}>
-            {productos.length > 0 ? (
-              productos.map((producto) => (
-                <div key={producto._id} style={styles.productCard}>
-                  <div style={styles.productImageContainer}>
-                    <img
-                      src={producto.imagenUrl}
-                      alt={producto.nombre}
-                      style={styles.productImage}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = `${API_BASE_URL}/uploads/default-product.jpg`;
-                      }}
-                    />
-                  </div>
-                  <div style={styles.productInfo}>
-                    <h3 style={styles.productName}>{producto.nombre}</h3>
-                    <p style={styles.productCategory}>
-                      <span style={styles.categoryBadge}>
-                        {producto.categoria || "sin categoría"}
-                      </span>
-                    </p>
-                    <p style={styles.productPrice}>
-                      ${formatearPrecio(producto.precio)}
-                    </p>
-                    <p style={styles.productDescription}>
-                      {producto.descripcion.length > 100
-                        ? `${producto.descripcion.substring(0, 100)}...`
-                        : producto.descripcion}
-                    </p>
-                    <div style={styles.productActions}>
-                      <button
-                        onClick={() => prepararEdicion(producto)}
-                        style={styles.btnEdit}
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => eliminarProducto(producto._id, producto.imagenPublicId)}
-                        style={styles.btnDelete}
-                      >
-                        🗑️ Eliminar
-                      </button>
+                <div style={styles.formGroup}>
+                  <label htmlFor="categoria">Categoría:</label>
+                  <select
+                    id="categoria"
+                    name="categoria"
+                    value={formData.categoria}
+                    onChange={handleInputChange}
+                    style={styles.input}
+                    required
+                  >
+                    <option value="">Seleccione una categoría</option>
+                    {categorias.map((categoria) => (
+                      <option key={categoria} value={categoria}>
+                        {categoria.charAt(0).toUpperCase() + categoria.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{...styles.formGroup, gridColumn: "span 3"}}>
+                  <label htmlFor="descripcion">Descripción:</label>
+                  <textarea
+                    id="descripcion"
+                    name="descripcion"
+                    value={formData.descripcion}
+                    onChange={handleInputChange}
+                    style={{...styles.input, height: '100px'}}
+                    placeholder="Descripción del producto"
+                    required
+                  />
+                </div>
+
+                <div style={{...styles.formGroup, gridColumn: "span 3"}}>
+                  <label htmlFor="imagen">Imagen:</label>
+                  <input
+                    type="file"
+                    id="imagen"
+                    name="imagen"
+                    onChange={handleImageUpload}
+                    style={styles.input}
+                    accept="image/*"
+                    disabled={uploadingImage}
+                  />
+                  {uploadingImage && (
+                    <div style={styles.uploadingMessage}>
+                      Subiendo imagen a Cloudinary...
                     </div>
+                  )}
+                  
+                  <div style={styles.formRow}>
+                    <div style={{flex: 1}}>
+                      <input
+                        type="text"
+                        name="imagenUrl"
+                        value={formData.imagenUrl}
+                        onChange={handleInputChange}
+                        style={styles.input}
+                        placeholder="O ingrese la URL de la imagen directamente"
+                      />
+                      {/* Campo oculto para el ID de Cloudinary */}
+                      <input
+                        type="hidden"
+                        name="imagenPublicId"
+                        value={formData.imagenPublicId}
+                      />
+                    </div>
+                    
+                    {previewImage && (
+                      <div style={styles.imagePreview}>
+                        <img 
+                          src={previewImage} 
+                          alt="Vista previa" 
+                          style={styles.previewImg}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div style={styles.noProductsMessage}>
-                No se encontraron productos
               </div>
-            )}
+
+              <div style={styles.buttonGroup}>
+                <button 
+                  type="submit" 
+                  style={styles.btnPrimary}
+                  disabled={uploadingImage}
+                >
+                  {modoEdicion ? "Actualizar" : "Agregar"}
+                </button>
+                {modoEdicion && (
+                  <button
+                    type="button"
+                    onClick={cancelarEdicion}
+                    style={styles.btnSecondary}
+                    disabled={uploadingImage}
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </form>
           </div>
+        )}
+
+        {/* Tabla de productos */}
+        <div style={styles.card}>
+          <h2>📋 Lista de Productos</h2>
+          
+          {productos.length > 0 ? (
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.tableHeader}>Imagen</th>
+                    <th style={styles.tableHeader}>Nombre</th>
+                    <th style={styles.tableHeader}>Categoría</th>
+                    <th style={styles.tableHeader}>Precio</th>
+                    <th style={styles.tableHeader}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productos.map((producto) => (
+                    <React.Fragment key={producto._id}>
+                      <tr style={styles.tableRow}>
+                        <td style={{...styles.tableCell, width: '80px'}}>
+                          <img
+                            src={producto.imagenUrl}
+                            alt={producto.nombre}
+                            style={styles.tableThumbnail}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `${API_BASE_URL}/uploads/default-product.jpg`;
+                            }}
+                          />
+                        </td>
+                        <td style={styles.tableCell}>{producto.nombre}</td>
+                        <td style={styles.tableCell}>
+                          <span style={styles.categoryBadge}>
+                            {producto.categoria || "sin categoría"}
+                          </span>
+                        </td>
+                        <td style={styles.tableCell}>${formatearPrecio(producto.precio)}</td>
+                        <td style={styles.tableCell}>
+                          <button
+                            onClick={() => toggleExpandirProducto(producto._id)}
+                            style={styles.btnSecondary}
+                          >
+                            {productoExpandido === producto._id ? "Ocultar" : "Ver más"}
+                          </button>
+                        </td>
+                      </tr>
+                      
+                      {/* Fila expandida con detalles y opciones */}
+                      {productoExpandido === producto._id && (
+                        <tr>
+                          <td colSpan="5" style={styles.expandedRow}>
+                            <div style={styles.expandedContent}>
+                              <div style={styles.expandedDetails}>
+                                <div style={styles.expandedImage}>
+                                  <img
+                                    src={producto.imagenUrl}
+                                    alt={producto.nombre}
+                                    style={styles.expandedImg}
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = `${API_BASE_URL}/uploads/default-product.jpg`;
+                                    }}
+                                  />
+                                </div>
+                                <div style={styles.expandedInfo}>
+                                  <h3 style={styles.expandedTitle}>{producto.nombre}</h3>
+                                  <p style={styles.expandedPrice}>${formatearPrecio(producto.precio)}</p>
+                                  <p style={styles.expandedCategory}>
+                                    Categoría: <span style={styles.categoryBadge}>
+                                      {producto.categoria || "sin categoría"}
+                                    </span>
+                                  </p>
+                                  <p style={styles.expandedDescription}>{producto.descripcion}</p>
+                                </div>
+                              </div>
+                              <div style={styles.expandedActions}>
+                                <button
+                                  onClick={() => prepararEdicion(producto)}
+                                  style={styles.btnEdit}
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
+                                  onClick={() => eliminarProducto(producto._id, producto.imagenPublicId)}
+                                  style={styles.btnDelete}
+                                >
+                                  🗑️ Eliminar
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={styles.noProductsMessage}>
+              No se encontraron productos
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -674,6 +763,17 @@ const styles = {
   form: {
     display: "flex",
     flexDirection: "column",
+    gap: "15px",
+  },
+  formRow: {
+    display: "flex",
+    gap: "15px",
+    alignItems: "flex-end",
+    flexWrap: "wrap",
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "15px",
   },
   formGroup: {
@@ -752,38 +852,82 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
   },
-  productGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+  tableContainer: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "10px",
+  },
+  tableHeader: {
+    backgroundColor: "#f2f2f2",
+    padding: "10px",
+    textAlign: "left",
+    borderBottom: "2px solid #ddd",
+  },
+  tableRow: {
+    borderBottom: "1px solid #ddd",
+  },
+  tableCell: {
+    padding: "10px",
+    verticalAlign: "middle",
+  },
+  tableThumbnail: {
+    width: "50px",
+    height: "50px",
+    objectFit: "cover",
+    borderRadius: "5px",
+  },
+  expandedRow: {
+    backgroundColor: "#f9f9f9",
+    padding: "0",
+  },
+  expandedContent: {
+    padding: "15px",
+  },
+  expandedDetails: {
+    display: "flex",
     gap: "20px",
+    marginBottom: "15px",
   },
-  productCard: {
-    border: "1px solid #e0e0e0",
-    borderRadius: "8px",
-    overflow: "hidden",
-    transition: "transform 0.3s ease, box-shadow 0.3s ease",
-    position: "relative",
+  expandedImage: {
+    width: "150px", 
+    height: "150px",
   },
-  productImageContainer: {
-    height: "200px",
-    overflow: "hidden",
-    position: "relative",
-  },
-  productImage: {
+  expandedImg: {
     width: "100%",
     height: "100%",
     objectFit: "cover",
+    borderRadius: "5px",
   },
-  productInfo: {
-    padding: "15px",
+  expandedInfo: {
+    flex: 1,
   },
-  productName: {
-    margin: "0 0 5px 0",
+  expandedTitle: {
     fontSize: "18px",
-    color: "#333333",
-  },
-  productCategory: {
     margin: "0 0 10px 0",
+  },
+  expandedPrice: {
+    fontSize: "16px",
+    fontWeight: "bold",
+    color: "#00515F",
+    margin: "0 0 10px 0",
+  },
+  expandedCategory: {
+    margin: "0 0 10px 0",
+  },
+  expandedDescription: {
+    margin: "0",
+    color: "#666",
+    lineHeight: "1.4",
+  },
+  expandedActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "10px",
+    borderTop: "1px solid #ddd",
+    paddingTop: "15px",
   },
   categoryBadge: {
     backgroundColor: "#00515F",
@@ -793,37 +937,19 @@ const styles = {
     fontSize: "12px",
     textTransform: "uppercase",
   },
-  productPrice: {
-    margin: "0 0 10px 0",
-    fontWeight: "bold",
-    color: "#00515F",
-    fontSize: "18px",
-  },
-  productDescription: {
-    margin: "0 0 15px 0",
-    color: "#666666",
-    fontSize: "14px",
-    lineHeight: "1.4",
-  },
-  productActions: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: "10px",
-  },
   noProductsMessage: {
     textAlign: "center",
     padding: "50px 0",
-    gridColumn: "1 / -1",
     color: "#666666",
     fontSize: "18px",
   },
   imagePreview: {
-    marginTop: "10px",
-    marginBottom: "10px",
+    width: "100px",
+    margin: "0 0 0 15px",
   },
   previewImg: {
-    maxWidth: "200px",
-    maxHeight: "200px",
+    width: "100%",
+    height: "auto",
     borderRadius: "5px",
     border: "1px solid #ccc",
   },
@@ -831,6 +957,11 @@ const styles = {
     color: "#0066cc",
     marginTop: "5px",
     fontStyle: "italic",
+  },
+  actionBar: {
+    marginBottom: "20px",
+    display: "flex",
+    justifyContent: "flex-end",
   }
 };
 
