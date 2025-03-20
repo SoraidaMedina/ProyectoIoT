@@ -55,7 +55,21 @@ const deleteImage = async (publicId) => {
   }
 };
 
+// Añade esto a tu utils/cloudinaryUtils.js
+const testConnection = async () => {
+  try {
+    const result = await cloudinary.api.ping();
+    console.log('Conexión a Cloudinary exitosa:', result);
+    return true;
+  } catch (error) {
+    console.error('Error al conectar con Cloudinary:', error);
+    return false;
+  }
+};
+
+// Exporta también esta función
 module.exports = {
   uploadImage,
-  deleteImage
+  deleteImage,
+  testConnection
 };

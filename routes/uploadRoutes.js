@@ -41,7 +41,7 @@ const upload = multer({
 });
 
 // Ruta para subir imágenes - mantiene compatibilidad con el código existente
-router.post('/', upload.single('imagen'), async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se proporcionó ningún archivo' });
@@ -67,7 +67,7 @@ router.post('/', upload.single('imagen'), async (req, res) => {
 });
 
 // Ruta específica para subir imágenes de usuario
-router.post('/usuario', upload.single('imagen'), async (req, res) => {
+router.post('/usuario', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se proporcionó ningún archivo' });
@@ -90,7 +90,7 @@ router.post('/usuario', upload.single('imagen'), async (req, res) => {
 });
 
 // Ruta específica para subir imágenes de productos
-router.post('/producto', upload.single('imagen'), async (req, res) => {
+router.post('/producto', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se proporcionó ningún archivo' });

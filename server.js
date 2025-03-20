@@ -76,6 +76,17 @@ mongoose
   .then(() => console.log("✅ Conectado a MongoDB"))
   .catch((err) => console.error("❌ Error de conexión a MongoDB:", err));
 
+  // En server.js, después de conectar a MongoDB
+const { testConnection } = require('./utils/cloudinaryUtils');
+testConnection()
+  .then(connected => {
+    if (connected) {
+      console.log('✅ Conexión a Cloudinary verificada');
+    } else {
+      console.error('❌ No se pudo conectar a Cloudinary');
+    }
+  });
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
