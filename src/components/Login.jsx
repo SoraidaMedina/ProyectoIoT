@@ -2,17 +2,61 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Form, Button, Container, Card, Alert } from "react-bootstrap";
 import { useUserContext } from "../context/UserContext";
+import { Eye, EyeOff } from "lucide-react";
 
 function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const { login } = useUserContext(); // Obtén la función login del contexto
+  const { login } = useUserContext();
+
+  // Email validation function
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!email.trim()) {
+      return "El correo electrónico es requerido";
+    }
+    
+    if (!emailRegex.test(email)) {
+      return "Ingrese un correo electrónico válido";
+    }
+    
+    return ""; // No error
+  };
+
+  // Password validation function
+  const validatePassword = (password) => {
+    if (!password.trim()) {
+      return "La contraseña es requerida";
+    }
+    
+    if (password.length < 8) {
+      return "La contraseña debe tener al menos 8 caracteres";
+    }
+    
+    return ""; // No error
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    
+    // Validate email and password
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    
+    // If there are validation errors, set them and prevent submission
+    if (emailError || passwordError) {
+      setErrors({
+        email: emailError,
+        password: passwordError
+      });
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
@@ -26,19 +70,23 @@ function Login() {
 
       if (response.ok) {
         alert(`¡Bienvenido, ${result.usuario.nombre}!`);
-        login(result.usuario); // Actualiza el estado del usuario en el contexto
+        login(result.usuario);
         
         // Redirige según el rol del usuario
         if (result.usuario.role === "admin") {
-          navigate("/admin"); // Redirige a administrador si tiene rol admin
+          navigate("/admin");
         } else {
-          navigate("/cliente"); // Redirige a cliente en todos los demás casos
+          navigate("/cliente");
         }
       } else {
-        setError(result.error || "Correo o contraseña incorrectos.");
+        setErrors({ 
+          server: result.error || "Correo o contraseña incorrectos."
+        });
       }
     } catch (err) {
-      setError("Error al conectar con el servidor. Intenta más tarde.");
+      setErrors({ 
+        server: "Error al conectar con el servidor. Intenta más tarde."
+      });
     }
   };
 
@@ -47,27 +95,58 @@ function Login() {
       <Card style={{ width: "22rem", padding: "20px", boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)" }}>
         <Card.Body>
           <h3 className="text-center">Iniciar Sesión</h3>
-          {error && <Alert variant="danger">{error}</Alert>}
+          {errors.server && <Alert variant="danger">{errors.server}</Alert>}
           <Form onSubmit={handleSubmit}>
-            <Form.Group controlId="formEmail">
+            <Form.Group controlId="formEmail" className="mb-3">
               <Form.Label>Correo Electrónico</Form.Label>
               <Form.Control
                 type="email"
                 placeholder="Ingrese su correo"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrors(prev => ({ ...prev, email: '', server: '' }));
+                }}
+                isInvalid={!!errors.email}
               />
+              <Form.Control.Feedback type="invalid">
+                {errors.email}
+              </Form.Control.Feedback>
             </Form.Group>
-            <Form.Group controlId="formPassword" className="mt-3">
+            <Form.Group controlId="formPassword" className="position-relative">
               <Form.Label>Contraseña</Form.Label>
-              <Form.Control
-                type="password"
-                placeholder="Ingrese su contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="position-relative">
+                <Form.Control
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Ingrese su contraseña"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrors(prev => ({ ...prev, password: '', server: '' }));
+                  }}
+                  isInvalid={!!errors.password || !!errors.server}
+                  className="pe-5" // Adds padding on the right for the button
+                />
+                <Button 
+                  variant="link" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent"
+                  style={{ 
+                    zIndex: 10, 
+                    right: "10px", 
+                    marginTop: "-10px" 
+                  }}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="gray" />
+                  ) : (
+                    <Eye size={20} color="gray" />
+                  )}
+                </Button>
+              </div>
+              <Form.Control.Feedback type="invalid">
+                {errors.password || errors.server}
+              </Form.Control.Feedback>
             </Form.Group>
             <Button variant="primary" type="submit" className="w-100 mt-4">
               Iniciar Sesión

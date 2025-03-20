@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { debounce } from 'lodash';
 
 // URL base para todas las llamadas a la API
 const API_BASE_URL = 'http://localhost:5000';
@@ -25,6 +26,14 @@ const AdminCRUDTienda = () => {
   const [mensajeExito, setMensajeExito] = useState("");
   const [mensajeError, setMensajeError] = useState("");
   const [categorias, setCategorias] = useState(['accesorios', 'alimento', 'otros']);
+  // Nuevo estado para manejar errores específicos de cada campo
+  const [erroresForm, setErroresForm] = useState({
+    nombre: '',
+    descripcion: '',
+    precio: '',
+    categoria: '',
+    imagen: ''
+  });
 
   // Cargar productos al iniciar el componente
   useEffect(() => {
@@ -74,9 +83,132 @@ const AdminCRUDTienda = () => {
       });
   };
 
+  // Validación del formulario completo
+  const validarFormulario = () => {
+    const errores = {};
+    
+    // Validar nombre (requerido y longitud)
+    if (!formData.nombre.trim()) {
+      errores.nombre = "El nombre es obligatorio";
+    } else if (formData.nombre.trim().length < 3) {
+      errores.nombre = "El nombre debe tener al menos 3 caracteres";
+    } else if (formData.nombre.trim().length > 100) {
+      errores.nombre = "El nombre no puede exceder los 100 caracteres";
+    }
+    
+    // Validar descripción (requerido y longitud)
+    if (!formData.descripcion.trim()) {
+      errores.descripcion = "La descripción es obligatoria";
+    } else if (formData.descripcion.trim().length < 10) {
+      errores.descripcion = "La descripción debe tener al menos 10 caracteres";
+    } else if (formData.descripcion.trim().length > 1000) {
+      errores.descripcion = "La descripción no puede exceder los 1000 caracteres";
+    }
+    
+    // Validar precio (requerido, formato numérico y rango)
+    if (!formData.precio) {
+      errores.precio = "El precio es obligatorio";
+    } else {
+      const precioNum = parseFloat(formData.precio);
+      if (isNaN(precioNum)) {
+        errores.precio = "El precio debe ser un número válido";
+      } else if (precioNum <= 0) {
+        errores.precio = "El precio debe ser mayor que cero";
+      } else if (precioNum > 999999.99) {
+        errores.precio = "El precio no puede exceder 999,999.99";
+      }
+    }
+    
+    // Validar categoría (requerido)
+    if (!formData.categoria) {
+      errores.categoria = "Debe seleccionar una categoría";
+    } else if (!categorias.includes(formData.categoria)) {
+      errores.categoria = "La categoría seleccionada no es válida";
+    }
+    
+    // Opcional: validar imagen si es un campo requerido en tu negocio
+    if (!modoEdicion && !formData.imagenUrl) {
+      errores.imagen = "La imagen es obligatoria para nuevos productos";
+    } else if (formData.imagenUrl && !validarURLImagen(formData.imagenUrl)) {
+      errores.imagen = "La URL de imagen no es válida";
+    }
+    
+    return errores;
+  };
+  
+  // Función auxiliar para validar URLs de imágenes
+  const validarURLImagen = (url) => {
+    if (!url) return false;
+    
+    // Verificar formato básico de URL
+    try {
+      new URL(url);
+    } catch (_) {
+      return false;
+    }
+    
+    // Verificar que la URL termina con una extensión de imagen común
+    const extensionesValidas = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    return extensionesValidas.some(ext => url.toLowerCase().endsWith(ext)) || 
+           url.includes('cloudinary.com');
+  };
+
+  // Validación para el formulario de búsqueda
+  const validarFormularioBusqueda = () => {
+    // Verificar que al menos un campo tenga valor
+    if (!filtroNombre.trim() && !filtroCategoria) {
+      setMensajeError("Ingrese al menos un criterio de búsqueda");
+      return false;
+    }
+    
+    // Validar longitud mínima del nombre para evitar búsquedas demasiado amplias
+    if (filtroNombre.trim() && filtroNombre.trim().length < 2) {
+      setMensajeError("El término de búsqueda debe tener al menos 2 caracteres");
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Implementar debounce para búsquedas
+  const buscarProductosDebounce = debounce(() => {
+    if (!validarFormularioBusqueda()) return;
+    
+    let url = `${API_BASE_URL}/api/admin/crud/tienda/buscar?`;
+    
+    if (filtroNombre) {
+      url += `nombre=${encodeURIComponent(filtroNombre)}`;
+    }
+    
+    if (filtroCategoria) {
+      url += `${filtroNombre ? '&' : ''}categoria=${encodeURIComponent(filtroCategoria)}`;
+    }
+    
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) {
+          return res.text().then(text => {
+            console.error("Error en la respuesta del servidor:", text);
+            throw new Error(`Error del servidor: ${res.status} ${res.statusText}`);
+          });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setProductos(data);
+        setMensajeError("");
+      })
+      .catch((error) => {
+        console.error("Error al filtrar productos:", error);
+        setMensajeError(`Error al buscar productos: ${error.message}`);
+      });
+  }, 500); // 500ms de retraso
+
   // Función para filtrar productos
   const filtrarProductos = (e) => {
     e.preventDefault();
+    
+    if (!validarFormularioBusqueda()) return;
     
     let url = `${API_BASE_URL}/api/admin/crud/tienda/buscar?`;
     
@@ -115,13 +247,19 @@ const AdminCRUDTienda = () => {
     cargarProductos();
   };
 
-  // Manejar cambios en el formulario
+  // Manejar cambios en el formulario con validación en tiempo real
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
+    // Limpiar el error específico del campo cuando el usuario comienza a escribir
+    setErroresForm({
+      ...erroresForm,
+      [name]: ''
+    });
+    
     if (name === 'precio') {
-      // Asegurarse de que solo se acepten números para el precio
-      const regex = /^[0-9]*\.?[0-9]*$/;
+      // Validación mejorada para precio (permite solo números y un punto decimal con máximo 2 decimales)
+      const regex = /^(\d+)?(\.\d{0,2})?$/;
       if (value === '' || regex.test(value)) {
         setFormData({
           ...formData,
@@ -136,10 +274,52 @@ const AdminCRUDTienda = () => {
     }
   };
 
-  // Manejar subida de imagen a Cloudinary
+  // Sanitizar datos del producto antes de enviarlos al servidor
+  const sanitizarDatosProducto = (datos) => {
+    return {
+      nombre: datos.nombre.trim(),
+      descripcion: datos.descripcion.trim(),
+      precio: parseFloat(parseFloat(datos.precio).toFixed(2)), // Asegurar 2 decimales
+      imagenUrl: datos.imagenUrl.trim(),
+      imagenPublicId: datos.imagenPublicId.trim(),
+      categoria: datos.categoria.trim()
+    };
+  };
+
+  // Manejar subida de imagen a Cloudinary con validaciones
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Validar tipo de archivo
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!tiposPermitidos.includes(file.type)) {
+      setMensajeError("Tipo de archivo no permitido. Use JPG, PNG, GIF o WEBP");
+      setErroresForm({
+        ...erroresForm,
+        imagen: "Tipo de archivo no permitido. Use JPG, PNG, GIF o WEBP"
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    // Validar tamaño máximo (5MB)
+    const tamañoMaximo = 5 * 1024 * 1024; // 5MB en bytes
+    if (file.size > tamañoMaximo) {
+      setMensajeError("El archivo es demasiado grande. El tamaño máximo es 5MB");
+      setErroresForm({
+        ...erroresForm,
+        imagen: "El archivo es demasiado grande. El tamaño máximo es 5MB"
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Limpiar el error de imagen si existía
+    setErroresForm({
+      ...erroresForm,
+      imagen: ''
+    });
 
     // Mostrar vista previa de la imagen
     const reader = new FileReader();
@@ -173,6 +353,10 @@ const AdminCRUDTienda = () => {
       .then((data) => {
         if (data.error) {
           setMensajeError(data.error);
+          setErroresForm({
+            ...erroresForm,
+            imagen: data.error
+          });
         } else {
           // Guardar la URL y publicId de Cloudinary en el estado del formulario
           setFormData({
@@ -187,25 +371,33 @@ const AdminCRUDTienda = () => {
       .catch((error) => {
         console.error("Error al subir imagen:", error);
         setMensajeError(`Error al subir la imagen: ${error.message}`);
+        setErroresForm({
+          ...erroresForm,
+          imagen: `Error al subir la imagen: ${error.message}`
+        });
         setUploadingImage(false);
       });
   };
 
-  // Función para añadir un nuevo producto
+  // Función para añadir un nuevo producto con validaciones completas
   const agregarProducto = (e) => {
     e.preventDefault();
     
-    // Validación básica
-    if (!formData.nombre || !formData.descripcion || !formData.precio || !formData.categoria) {
-      setMensajeError("Por favor complete todos los campos obligatorios");
+    // Ejecutar validación completa
+    const errores = validarFormulario();
+    
+    // Si hay errores, actualizar estado y detener envío
+    if (Object.keys(errores).length > 0) {
+      setErroresForm(errores);
+      setMensajeError("Por favor corrija los errores en el formulario");
       return;
     }
-
-    // Convertir el precio a número
-    const productoData = {
-      ...formData,
-      precio: parseFloat(formData.precio)
-    };
+    
+    // Limpiar errores si todo está bien
+    setErroresForm({});
+    
+    // Sanitizar datos antes de enviar
+    const productoData = sanitizarDatosProducto(formData);
 
     fetch(`${API_BASE_URL}/api/admin/crud/tienda`, {
       method: "POST",
@@ -249,6 +441,15 @@ const AdminCRUDTienda = () => {
 
   // Función para preparar la edición de un producto
   const prepararEdicion = (producto) => {
+    // Limpiar errores de formulario previos
+    setErroresForm({
+      nombre: '',
+      descripcion: '',
+      precio: '',
+      categoria: '',
+      imagen: ''
+    });
+    
     setProductoEditando(producto._id);
     setModoEdicion(true);
     setMostrarFormulario(true);
@@ -263,21 +464,25 @@ const AdminCRUDTienda = () => {
     setPreviewImage(producto.imagenUrl);
   };
 
-  // Función para actualizar un producto
+  // Función para actualizar un producto con validaciones completas
   const actualizarProducto = (e) => {
     e.preventDefault();
     
-    // Validación básica
-    if (!formData.nombre || !formData.descripcion || !formData.precio) {
-      setMensajeError("Por favor complete todos los campos obligatorios");
+    // Ejecutar validación completa
+    const errores = validarFormulario();
+    
+    // Si hay errores, actualizar estado y detener envío
+    if (Object.keys(errores).length > 0) {
+      setErroresForm(errores);
+      setMensajeError("Por favor corrija los errores en el formulario");
       return;
     }
-
-    // Convertir el precio a número
-    const productoData = {
-      ...formData,
-      precio: parseFloat(formData.precio)
-    };
+    
+    // Limpiar errores si todo está bien
+    setErroresForm({});
+    
+    // Sanitizar datos antes de enviar
+    const productoData = sanitizarDatosProducto(formData);
 
     fetch(`${API_BASE_URL}/api/admin/crud/tienda/${productoEditando}`, {
       method: "PUT",
@@ -321,9 +526,9 @@ const AdminCRUDTienda = () => {
       });
   };
 
-  // Función para eliminar un producto
-  const eliminarProducto = (id, imagenPublicId) => {
-    if (window.confirm("¿Está seguro de eliminar este producto?")) {
+  // Función mejorada para eliminar un producto con confirmación detallada
+  const eliminarProducto = (id, nombre, imagenPublicId) => {
+    if (window.confirm(`¿Está seguro de eliminar el producto "${nombre}"? Esta acción no se puede deshacer.`)) {
       // Si hay un publicId de imagen en Cloudinary, primero intentamos eliminarla
       if (imagenPublicId) {
         fetch(`${API_BASE_URL}/api/upload/${encodeURIComponent(imagenPublicId)}`, {
@@ -376,6 +581,14 @@ const AdminCRUDTienda = () => {
     });
     setPreviewImage(null);
     setMostrarFormulario(false);
+    // Limpiar errores de formulario
+    setErroresForm({
+      nombre: '',
+      descripcion: '',
+      precio: '',
+      categoria: '',
+      imagen: ''
+    });
   };
 
   // Función para expandir/contraer detalles de un producto
@@ -390,6 +603,13 @@ const AdminCRUDTienda = () => {
   // Formatear precio para mostrarlo con 2 decimales
   const formatearPrecio = (precio) => {
     return Number(precio).toFixed(2);
+  };
+
+  // Estilo para los mensajes de error de campo
+  const errorStyle = {
+    color: 'red',
+    fontSize: '12px',
+    marginTop: '5px'
   };
 
   return (
@@ -443,7 +663,13 @@ const AdminCRUDTienda = () => {
                 type="text"
                 id="filtroNombre"
                 value={filtroNombre}
-                onChange={(e) => setFiltroNombre(e.target.value)}
+                onChange={(e) => {
+                  setFiltroNombre(e.target.value);
+                  // Activar búsqueda automática con debounce si hay al menos 2 caracteres
+                  if (e.target.value.length >= 2 || filtroCategoria) {
+                    buscarProductosDebounce();
+                  }
+                }}
                 style={styles.input}
                 placeholder="Buscar por nombre"
               />
@@ -454,7 +680,11 @@ const AdminCRUDTienda = () => {
               <select
                 id="filtroCategoria"
                 value={filtroCategoria}
-                onChange={(e) => setFiltroCategoria(e.target.value)}
+                onChange={(e) => {
+                  setFiltroCategoria(e.target.value);
+                  // Activar búsqueda automática con debounce si se selecciona una categoría
+                  buscarProductosDebounce();
+                }}
                 style={styles.input}
               >
                 <option value="">Todas las categorías</option>
@@ -498,10 +728,14 @@ const AdminCRUDTienda = () => {
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleInputChange}
-                    style={styles.input}
+                    style={{
+                      ...styles.input,
+                      borderColor: erroresForm.nombre ? 'red' : '#ccc'
+                    }}
                     placeholder="Nombre del producto"
                     required
                   />
+                  {erroresForm.nombre && <div style={errorStyle}>{erroresForm.nombre}</div>}
                 </div>
 
                 <div style={styles.formGroup}>
@@ -512,10 +746,14 @@ const AdminCRUDTienda = () => {
                     name="precio"
                     value={formData.precio}
                     onChange={handleInputChange}
-                    style={styles.input}
+                    style={{
+                      ...styles.input,
+                      borderColor: erroresForm.precio ? 'red' : '#ccc'
+                    }}
                     placeholder="Precio (ejemplo: 99.99)"
                     required
                   />
+                  {erroresForm.precio && <div style={errorStyle}>{erroresForm.precio}</div>}
                 </div>
 
                 <div style={styles.formGroup}>
@@ -525,7 +763,10 @@ const AdminCRUDTienda = () => {
                     name="categoria"
                     value={formData.categoria}
                     onChange={handleInputChange}
-                    style={styles.input}
+                    style={{
+                      ...styles.input,
+                      borderColor: erroresForm.categoria ? 'red' : '#ccc'
+                    }}
                     required
                   >
                     <option value="">Seleccione una categoría</option>
@@ -535,6 +776,7 @@ const AdminCRUDTienda = () => {
                       </option>
                     ))}
                   </select>
+                  {erroresForm.categoria && <div style={errorStyle}>{erroresForm.categoria}</div>}
                 </div>
 
                 <div style={{...styles.formGroup, gridColumn: "span 3"}}>
@@ -544,10 +786,15 @@ const AdminCRUDTienda = () => {
                     name="descripcion"
                     value={formData.descripcion}
                     onChange={handleInputChange}
-                    style={{...styles.input, height: '100px'}}
+                    style={{
+                      ...styles.input, 
+                      height: '100px',
+                      borderColor: erroresForm.descripcion ? 'red' : '#ccc'
+                    }}
                     placeholder="Descripción del producto"
                     required
                   />
+                  {erroresForm.descripcion && <div style={errorStyle}>{erroresForm.descripcion}</div>}
                 </div>
 
                 <div style={{...styles.formGroup, gridColumn: "span 3"}}>
@@ -557,8 +804,11 @@ const AdminCRUDTienda = () => {
                     id="imagen"
                     name="imagen"
                     onChange={handleImageUpload}
-                    style={styles.input}
-                    accept="image/*"
+                    style={{
+                      ...styles.input,
+                      borderColor: erroresForm.imagen ? 'red' : '#ccc'
+                    }}
+                    accept="image/jpeg, image/png, image/gif, image/webp"
                     disabled={uploadingImage}
                   />
                   {uploadingImage && (
@@ -574,7 +824,10 @@ const AdminCRUDTienda = () => {
                         name="imagenUrl"
                         value={formData.imagenUrl}
                         onChange={handleInputChange}
-                        style={styles.input}
+                        style={{
+                          ...styles.input,
+                          borderColor: erroresForm.imagen ? 'red' : '#ccc'
+                        }}
                         placeholder="O ingrese la URL de la imagen directamente"
                       />
                       {/* Campo oculto para el ID de Cloudinary */}
@@ -595,6 +848,7 @@ const AdminCRUDTienda = () => {
                       </div>
                     )}
                   </div>
+                  {erroresForm.imagen && <div style={errorStyle}>{erroresForm.imagen}</div>}
                 </div>
               </div>
 
@@ -705,7 +959,7 @@ const AdminCRUDTienda = () => {
                                   ✏️ Editar
                                 </button>
                                 <button
-                                  onClick={() => eliminarProducto(producto._id, producto.imagenPublicId)}
+                                  onClick={() => eliminarProducto(producto._id, producto.nombre, producto.imagenPublicId)}
                                   style={styles.btnDelete}
                                 >
                                   🗑️ Eliminar

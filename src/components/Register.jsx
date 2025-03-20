@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Button, Container, Card, Alert, Row, Col } from "react-bootstrap";
+import { Eye, EyeOff } from "lucide-react";
 
 function Register() {
   const navigate = useNavigate();
@@ -12,26 +13,83 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [direccion, setDireccion] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar contraseña
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Estado para confirmar contraseña
+
+  // Validaciones
+  const validateNombreApellido = (value) => {
+    const regex = /^[A-Za-z\s]+$/;
+    return (
+      value.length >= 2 &&
+      value.length <= 50 &&
+      regex.test(value) &&
+      value.charAt(0) === value.charAt(0).toUpperCase()
+    );
+  };
+
+  const validateEmail = (value) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return value.length <= 100 && regex.test(value);
+  };
+
+  const validatePassword = (value) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,20}$/;
+    return regex.test(value);
+  };
+
+  const validateDireccion = (value) => {
+    const regex = /^[A-Za-z0-9\s,.-]+$/;
+    return value.length >= 5 && value.length <= 200 && regex.test(value);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
 
+    if (!nombre || !validateNombreApellido(nombre)) {
+      setError("❌ El nombre debe tener entre 2 y 50 caracteres, solo letras y espacios, y empezar con mayúscula.");
+      return;
+    }
+    if (!apellidoPaterno || !validateNombreApellido(apellidoPaterno)) {
+      setError("❌ El apellido paterno debe tener entre 2 y 50 caracteres, solo letras y espacios, y empezar con mayúscula.");
+      return;
+    }
+    if (!apellidoMaterno || !validateNombreApellido(apellidoMaterno)) {
+      setError("❌ El apellido materno debe tener entre 2 y 50 caracteres, solo letras y espacios, y empezar con mayúscula.");
+      return;
+    }
+
+    if (!email || !validateEmail(email)) {
+      setError("❌ El correo debe ser válido y no exceder los 100 caracteres.");
+      return;
+    }
+
+    if (!password || !validatePassword(password)) {
+      setError(
+        "❌ La contraseña debe tener entre 8 y 20 caracteres, incluir una mayúscula, una minúscula, un número y un carácter especial (!@#$%^&*)."
+      );
+      return;
+    }
     if (password !== confirmPassword) {
       setError("❌ Las contraseñas no coinciden.");
       return;
     }
 
+    if (!direccion || !validateDireccion(direccion)) {
+      setError("❌ La dirección debe tener entre 5 y 200 caracteres y solo permitir letras, números, espacios, comas, puntos y guiones.");
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST", // Cambiado a POST
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, apellidoPaterno, apellidoMaterno, email, password, direccion }),
       });
 
       const data = await response.json();
       if (response.ok) {
-        setSuccess("✅ Registro exitoso. Redirigiendo...");
+        setError("");
         setTimeout(() => navigate("/login"), 2000);
       } else {
         setError(data.error || "❌ Error en el registro.");
@@ -48,7 +106,6 @@ function Register() {
           <h3 className="text-center" style={styles.title}>Registro</h3>
 
           {error && <Alert variant="danger" className="mt-3" style={styles.alert}>{error}</Alert>}
-          {success && <Alert variant="success" className="mt-3" style={styles.alert}>{success}</Alert>}
 
           <Form onSubmit={handleSubmit}>
             <Row>
@@ -103,28 +160,40 @@ function Register() {
                   />
                 </Form.Group>
 
-                <Form.Group controlId="formPassword" className="mt-3">
+                <Form.Group controlId="formPassword" className="mt-3" style={{ position: "relative" }}>
                   <Form.Label>Contraseña</Form.Label>
                   <Form.Control
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Ingrese su contraseña"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     style={styles.input}
                   />
+                  <span
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </span>
                 </Form.Group>
 
-                <Form.Group controlId="formConfirmPassword" className="mt-3">
+                <Form.Group controlId="formConfirmPassword" className="mt-3" style={{ position: "relative" }}>
                   <Form.Label>Confirmar Contraseña</Form.Label>
                   <Form.Control
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirme su contraseña"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     style={styles.input}
                   />
+                  <span
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </span>
                 </Form.Group>
               </Col>
             </Row>
@@ -175,7 +244,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#F7F9FC",
-    marginTop: "90px",  // Agregar margin-top aquí
+    marginTop: "90px",
   },
   card: {
     width: "40rem",
@@ -210,6 +279,13 @@ const styles = {
     fontWeight: "bold",
     textDecoration: "none",
     transition: "color 0.3s",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: "10px",
+    top: "38px",
+    cursor: "pointer",
+    color: "#666",
   },
 };
 
