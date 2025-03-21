@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button, Form, Row, Col, Alert } from "react-bootstrap";
+import { client, TOPICS } from "../../mqttConfig";
 
 function ConfiguracionDispensador() {
-  const [cantidadDispensar, setCantidadDispensar] = useState("");
-  const [horaDispensacion, setHoraDispensacion] = useState("");
-  const [nivelAlimento, setNivelAlimento] = useState("");
+  const [cantidadDispensar, setCantidadDispensar] = useState("100");
+  const [horaDispensacion, setHoraDispensacion] = useState("08:00");
   const [modoVacaciones, setModoVacaciones] = useState(false);
   const [error, setError] = useState("");
+  const [mensajeExito, setMensajeExito] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/configuracion/configuracion")
+    // Cargar configuración actual
+    fetch("/api/dispensador/configuracion")
       .then((res) => {
         if (!res.ok) {
           throw new Error("Error al obtener la configuración");
@@ -20,7 +22,6 @@ function ConfiguracionDispensador() {
         if (data && Object.keys(data).length > 0) {
           setCantidadDispensar(data.cantidadDispensar);
           setHoraDispensacion(data.horaDispensacion);
-          setNivelAlimento(data.nivelAlimento);
           setModoVacaciones(data.modoVacaciones);
         }
       })
@@ -32,8 +33,11 @@ function ConfiguracionDispensador() {
 
   const handleActualizar = async (e) => {
     e.preventDefault();
+    setError("");
+    setMensajeExito("");
+    
     try {
-      const response = await fetch("http://localhost:5000/api/configuracion/configuracion", {
+      const response = await fetch("/api/dispensador/configuracion", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -41,7 +45,6 @@ function ConfiguracionDispensador() {
         body: JSON.stringify({
           cantidadDispensar,
           horaDispensacion,
-          nivelAlimento,
           modoVacaciones,
         }),
       });
@@ -51,18 +54,39 @@ function ConfiguracionDispensador() {
       }
 
       const data = await response.json();
-      alert(data.mensaje);
+      setMensajeExito(data.mensaje || "Configuración actualizada con éxito");
+      
+      // Publicar configuración a MQTT (opcional)
+      const configMqtt = JSON.stringify({
+        cantidadDispensar,
+        horaDispensacion,
+        modoVacaciones
+      });
+      client.publish("dispensador/config", configMqtt);
+      
     } catch (error) {
       console.error("❌ Error al actualizar la configuración:", error);
-      alert("Error al actualizar la configuración. Intenta más tarde.");
+      setError("Error al actualizar la configuración. Intenta más tarde.");
     }
+  };
+
+  // Función para realizar una dispensación de prueba
+  const dispensarPrueba = () => {
+    // Publicar mensaje a MQTT
+    client.publish(TOPICS.DISPENSADOR, "20", { qos: 0, retain: false });
+    setMensajeExito("Dispensación de prueba iniciada (20g)");
+    
+    // Limpiar mensaje después de 3 segundos
+    setTimeout(() => {
+      setMensajeExito("");
+    }, 3000);
   };
 
   return (
     <div style={styles.fondo}>
       <Container className="py-5 mt-5">
         <Card className="p-4 shadow text-center mx-auto" style={styles.card}>
-          {/* 📌 Encabezado dentro del Card */}
+          {/* Encabezado dentro del Card */}
           <div style={styles.encabezado}>
             <h2 className="fw-bold text-center" style={styles.titulo}>
               Configuración del Dispensador
@@ -73,6 +97,7 @@ function ConfiguracionDispensador() {
           </div>
 
           {error && <Alert variant="danger">{error}</Alert>}
+          {mensajeExito && <Alert variant="success">{mensajeExito}</Alert>}
 
           <Card.Body>
             <Form onSubmit={handleActualizar}>
@@ -82,7 +107,8 @@ function ConfiguracionDispensador() {
                     <Form.Label style={styles.textoBlanco}>Cantidad a dispensar (gramos)</Form.Label>
                     <Form.Control
                       type="number"
-                      min="1"
+                      min="10"
+                      max="500"
                       value={cantidadDispensar}
                       onChange={(e) => setCantidadDispensar(e.target.value)}
                       required
@@ -106,38 +132,38 @@ function ConfiguracionDispensador() {
               </Row>
 
               <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group controlId="nivelAlimento">
-                    <Form.Label style={styles.textoBlanco}>Nivel de alimento (%)</Form.Label>
-                    <Form.Control
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={nivelAlimento}
-                      onChange={(e) => setNivelAlimento(e.target.value)}
-                      required
-                      style={styles.input}
-                    />
-                  </Form.Group>
-                </Col>
-
-                <Col md={6}>
-                  <Form.Group controlId="modoVacaciones">
-                    <Form.Label style={styles.textoBlanco}>Modo vacaciones</Form.Label>
+                <Col md={12}>
+                  <Form.Group controlId="modoVacaciones" className="d-flex align-items-center">
                     <Form.Check
                       type="switch"
                       checked={modoVacaciones}
                       onChange={(e) => setModoVacaciones(e.target.checked)}
-                      style={styles.textoBlanco}
+                      style={{marginRight: '10px'}}
                     />
+                    <Form.Label style={styles.textoBlanco} className="mb-0">
+                      Modo vacaciones (dispensar cada 48 horas)
+                    </Form.Label>
                   </Form.Group>
                 </Col>
               </Row>
 
-              <Button variant="primary" type="submit" className="mt-3" style={styles.boton}>
-                Actualizar Configuración
-              </Button>
+              <div className="d-flex justify-content-between mt-4">
+                <Button variant="warning" onClick={dispensarPrueba} style={styles.botonSecundario}>
+                  Dispensar prueba
+                </Button>
+                <Button variant="primary" type="submit" style={styles.boton}>
+                  Actualizar Configuración
+                </Button>
+              </div>
             </Form>
+            
+            <div style={styles.tarjeta} className="mt-4">
+              <h5 style={{color: "#FFC914"}}>Información adicional</h5>
+              <p className="small text-muted">
+                El modo vacaciones reduce la frecuencia de dispensación para cuando estés fuera de casa.
+                Asegúrate de que el dispensador tenga suficiente alimento antes de activar este modo.
+              </p>
+            </div>
           </Card.Body>
         </Card>
       </Container>
@@ -157,9 +183,8 @@ const styles = {
     color: "#ffffff",
     padding: "20px",
     boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-    
     borderRadius: "15px",
-    border: "2px solid #00515f", // Agregado: borde visible en color #00515f
+    border: "2px solid #00515f", // Borde visible en color #00515f
   },
   encabezado: {
     backgroundColor: "#1f2427", // Gris oscuro dentro del Card
@@ -188,7 +213,20 @@ const styles = {
     color: "#000000", // Texto negro
     fontWeight: "bold",
   },
+  botonSecundario: {
+    fontSize: "14px",
+    padding: "8px 20px",
+    backgroundColor: "#00515f", // Fondo azul oscuro
+    borderColor: "#ffc914", // Borde amarillo
+    color: "#ffffff", // Texto blanco
+  },
+  tarjeta: {
+    backgroundColor: "#2a3438",
+    borderRadius: "10px",
+    padding: "15px",
+    marginTop: "15px",
+    border: "1px solid #334",
+  },
 };
-
 
 export default ConfiguracionDispensador;

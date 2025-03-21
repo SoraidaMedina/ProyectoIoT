@@ -23,6 +23,25 @@ router.post("/", async (req, res) => {
   }
 });
 
+// 📌 Actualizar una pregunta existente
+router.put("/:id", async (req, res) => {
+  try {
+    const preguntaActualizada = await Pregunta.findByIdAndUpdate(
+      req.params.id, 
+      req.body, 
+      { new: true } // Devuelve el documento actualizado
+    );
+    
+    if (!preguntaActualizada) {
+      return res.status(404).json({ mensaje: "Pregunta no encontrada" });
+    }
+    
+    res.json(preguntaActualizada);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al actualizar la pregunta" });
+  }
+});
+
 // 📌 Eliminar una pregunta
 router.delete("/:id", async (req, res) => {
   try {

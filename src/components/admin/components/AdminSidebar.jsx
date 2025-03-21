@@ -31,6 +31,7 @@ const AdminSidebar = () => {
         <li>
           <strong style={styles.sectionTitle}>Configuración</strong>
           <ul>
+            <li><Link to="/admin/crud-preguntas" style={styles.sidebarLink}>❓ Administrar Preguntas Frecuentes</Link></li>
             <li><Link to="/admin/configuracion-datos" style={styles.sidebarLink}>⚙️ Configuración de Datos</Link></li>
           </ul>
         </li>

@@ -3,6 +3,29 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+// Configuración básica de MQTT - Solo lo esencial
+const mqtt = require("mqtt");
+const mqttClient = mqtt.connect("mqtt://localhost:1883");
+
+// Eventos básicos de MQTT
+mqttClient.on('connect', () => {
+  console.log('✅ Conectado al servidor MQTT');
+  
+  // Suscribirse a temas básicos
+  mqttClient.subscribe("sensores/peso");
+  mqttClient.subscribe("sensores/distancia");
+  mqttClient.subscribe("sensores/led");
+  mqttClient.subscribe("sensores/servo");
+});
+
+mqttClient.on('message', (topic, message) => {
+  console.log(`📩 Mensaje MQTT: ${topic} => ${message.toString()}`);
+});
+
+mqttClient.on('error', (err) => {
+  console.error('❌ Error MQTT:', err.message);
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -24,7 +47,6 @@ const preguntasRoutes = require("./routes/preguntas");
 const AuthRoutes = require("./routes/AuthRoutes");
 const MascotaRoutes = require("./routes/MascotaRoutes");
 const ConfiguracionRoutes = require("./routes/ConfiguracionRoutes");
-const DispensadorRoutes = require("./routes/dispensadorRoutes"); // ✅ Importar la nueva ruta
 
 //Importar Admin
 const iotRoutes = require("./routes/iotRoutes");
@@ -38,8 +60,15 @@ const adminCRUDUsuariosRoutes = require("./routes/adminCRUDUsuariosRoutes");
 const tiendaCRUDRoutes = require("./routes/tiendaCRUDRoutes");
 const procesoCompraRoutes = require("./routes/procesoCompra");
 const adminPedidosRoutes = require('./routes/adminPedidosRoutes');
-// Elimina esta línea duplicada: const pedidosRoutes = require('./routes/pedidosRoutes');
 
+// Ruta simple para verificar MQTT
+app.get('/api/mqtt-status', (req, res) => {
+  res.json({
+    mqtt: {
+      conectado: mqttClient.connected
+    }
+  });
+});
 
 app.use("/api/proceso_compra", procesoCompraRoutes);
 //rutas administrador
@@ -68,7 +97,6 @@ app.use('/api/pedidos', pedidosRoutes);
 app.use("/api/auth", AuthRoutes);
 app.use("/api/mascotas", MascotaRoutes);
 app.use("/api/configuracion", ConfiguracionRoutes);
-app.use("/api/dispensador", DispensadorRoutes); // ✅ Integrar la ruta del dispensador
 
 // Conectar a MongoDB
 mongoose
@@ -76,7 +104,7 @@ mongoose
   .then(() => console.log("✅ Conectado a MongoDB"))
   .catch((err) => console.error("❌ Error de conexión a MongoDB:", err));
 
-  // En server.js, después de conectar a MongoDB
+// En server.js, después de conectar a MongoDB
 const { testConnection } = require('./utils/cloudinaryUtils');
 testConnection()
   .then(connected => {

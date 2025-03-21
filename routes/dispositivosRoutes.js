@@ -1,252 +1,123 @@
-// routes/dispositivosRoutes.js
 const express = require("express");
 const router = express.Router();
-const Dispositivo = require("../models/Dispositivo");
-const Usuario = require("../models/Usuario");
-const HistorialActividad = require("../models/HistorialActividad");
+const Dispensador = require("../models/Dispensador");
+// Eliminada la referencia al middleware de autenticación
 
-// Obtener todos los dispositivos con información del usuario
-router.get("/", async (req, res) => {
+// Obtener configuración actual del dispensador
+router.get("/configuracion", async (req, res) => {
   try {
-    // Obtenemos todos los dispositivos
-    const dispositivos = await Dispositivo.find().sort({ fechaRegistro: -1 });
+    const configuracion = await Dispensador.findOne();
+    if (!configuracion) {
+      // Si no existe, creamos una configuración por defecto
+      const nuevaConfig = new Dispensador();
+      await nuevaConfig.save();
+      return res.json(nuevaConfig);
+    }
+    res.json(configuracion);
+  } catch (error) {
+    console.error("❌ Error al obtener configuración:", error);
+    res.status(500).json({ mensaje: "Error al obtener configuración", error: error.message });
+  }
+});
+
+// Actualizar configuración del dispensador
+router.put("/configuracion", async (req, res) => {
+  try {
+    const { cantidadDispensar, horaDispensacion, modoVacaciones } = req.body;
     
-    // Para cada dispositivo, obtenemos el correo del usuario
-    const dispositivosConCorreo = await Promise.all(
-      dispositivos.map(async (dispositivo) => {
-        const usuario = await Usuario.findById(dispositivo.usuarioId);
-        
-        return {
-          id: dispositivo._id,
-          correo: usuario ? usuario.email : "Usuario no encontrado",
-          mac: dispositivo.mac,
-          nombre: dispositivo.nombre,
-          estado: dispositivo.estado,
-          ultimoReinicio: dispositivo.ultimoReinicio,
-          fechaRegistro: dispositivo.fechaRegistro
-        };
-      })
+    const configuracion = await Dispensador.findOneAndUpdate(
+      {}, 
+      { cantidadDispensar, horaDispensacion, modoVacaciones }, 
+      { new: true, upsert: true }
     );
     
-    res.json(dispositivosConCorreo);
+    res.json({ 
+      mensaje: "Configuración actualizada con éxito", 
+      configuracion 
+    });
   } catch (error) {
-    console.error("Error al obtener dispositivos:", error);
-    res.status(500).json({ mensaje: "Error al obtener dispositivos" });
+    console.error("❌ Error al actualizar configuración:", error);
+    res.status(500).json({ mensaje: "Error al actualizar configuración", error: error.message });
   }
 });
 
-// Obtener un dispositivo específico
-router.get("/:id", async (req, res) => {
+// Dispensar alimento manualmente
+router.post("/dispensar", async (req, res) => {
   try {
-    const dispositivo = await Dispositivo.findById(req.params.id);
+    const { cantidad } = req.body;
     
-    if (!dispositivo) {
-      return res.status(404).json({ mensaje: "Dispositivo no encontrado" });
+    if (isNaN(cantidad) || cantidad < 10 || cantidad > 500) {
+      return res.status(400).json({ mensaje: "La cantidad debe estar entre 10 y 500 gramos" });
     }
     
-    // Obtener información del usuario
-    const usuario = await Usuario.findById(dispositivo.usuarioId);
+    // Guardar registro de dispensación
+    const configuracion = await Dispensador.findOne();
     
-    const dispositivoConUsuario = {
-      ...dispositivo.toObject(),
-      usuario: usuario ? {
-        id: usuario._id,
-        email: usuario.email,
-        nombre: usuario.nombre
-      } : null
-    };
+    if (!configuracion) {
+      const nuevaConfig = new Dispensador({
+        historialDispensaciones: [{
+          cantidad,
+          fecha: new Date(),
+        }],
+        ultimaDispensacion: new Date()
+      });
+      await nuevaConfig.save();
+    } else {
+      configuracion.historialDispensaciones.push({
+        cantidad,
+        fecha: new Date(),
+      });
+      configuracion.ultimaDispensacion = new Date();
+      await configuracion.save();
+    }
     
-    res.json(dispositivoConUsuario);
+    // Aquí puedes añadir lógica adicional para comunicarte con tu ESP32
+    // por ejemplo, enviar un mensaje MQTT (requiere un cliente MQTT en el servidor)
+    
+    res.json({ mensaje: `Dispensando ${cantidad} gramos de alimento` });
   } catch (error) {
-    console.error("Error al obtener dispositivo:", error);
-    res.status(500).json({ mensaje: "Error al obtener dispositivo" });
+    console.error("❌ Error al dispensar alimento:", error);
+    res.status(500).json({ mensaje: "Error al dispensar alimento", error: error.message });
   }
 });
 
-// Crear un nuevo dispositivo
-router.post("/", async (req, res) => {
+// Obtener historial de dispensaciones
+router.get("/historial", async (req, res) => {
   try {
-    const { usuarioId, nombre, mac, estado } = req.body;
-    
-    // Verificar si el usuario existe
-    const usuario = await Usuario.findById(usuarioId);
-    if (!usuario) {
-      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    const dispensador = await Dispensador.findOne();
+    if (!dispensador) {
+      return res.json({ historial: [] });
     }
     
-    // Verificar si el MAC ya existe
-    const dispositivoExistente = await Dispositivo.findOne({ mac });
-    if (dispositivoExistente) {
-      return res.status(400).json({ mensaje: "El MAC ya está registrado" });
-    }
-    
-    const nuevoDispositivo = new Dispositivo({
-      usuarioId,
-      nombre: nombre || "Dispensador",
-      mac,
-      estado: estado || "Apagado"
-    });
-    
-    await nuevoDispositivo.save();
-    
-    // Registrar actividad
-    const nuevaActividad = new HistorialActividad({
-      tipo: 'dispositivo',
-      accion: 'registro',
-      usuarioId,
-      email: usuario.email,
-      descripcion: `Nuevo dispositivo registrado: ${nombre || "Dispensador"} (${mac})`,
-      detalles: {
-        dispositivoId: nuevoDispositivo._id,
-        mac: nuevoDispositivo.mac
-      }
-    });
-    
-    await nuevaActividad.save();
-    
-    res.status(201).json({
-      mensaje: "Dispositivo registrado correctamente",
-      dispositivo: nuevoDispositivo
-    });
+    res.json({ historial: dispensador.historialDispensaciones });
   } catch (error) {
-    console.error("Error al registrar dispositivo:", error);
-    res.status(500).json({ mensaje: "Error al registrar dispositivo" });
+    console.error("❌ Error al obtener historial:", error);
+    res.status(500).json({ mensaje: "Error al obtener historial", error: error.message });
   }
 });
 
-// Actualizar un dispositivo
-router.put("/:id", async (req, res) => {
+// Actualizar nivel de alimento (se podría llamar desde un webhook o servicio)
+router.put("/nivel", async (req, res) => {
   try {
-    const { nombre, estado } = req.body;
+    const { nivel } = req.body;
     
-    const dispositivo = await Dispositivo.findByIdAndUpdate(
-      req.params.id,
-      { nombre, estado },
-      { new: true }
+    if (!["🟢 Lleno", "🟡 Medio", "🔴 Vacío", "❓ Desconocido"].includes(nivel)) {
+      return res.status(400).json({ mensaje: "Nivel de alimento no válido" });
+    }
+    
+    const configuracion = await Dispensador.findOneAndUpdate(
+      {}, 
+      { nivelAlimento: nivel }, 
+      { new: true, upsert: true }
     );
     
-    if (!dispositivo) {
-      return res.status(404).json({ mensaje: "Dispositivo no encontrado" });
-    }
-    
-    // Registrar actividad
-    const usuario = await Usuario.findById(dispositivo.usuarioId);
-    
-    const nuevaActividad = new HistorialActividad({
-      tipo: 'dispositivo',
-      accion: 'actualización',
-      usuarioId: dispositivo.usuarioId,
-      email: usuario ? usuario.email : null,
-      descripcion: `Dispositivo actualizado: ${dispositivo.nombre} (${dispositivo.mac})`,
-      detalles: {
-        dispositivoId: dispositivo._id,
-        mac: dispositivo.mac,
-        cambios: req.body
-      }
-    });
-    
-    await nuevaActividad.save();
-    
-    res.json({
-      mensaje: "Dispositivo actualizado correctamente",
-      dispositivo
+    res.json({ 
+      mensaje: "Nivel de alimento actualizado", 
+      nivelAlimento: configuracion.nivelAlimento 
     });
   } catch (error) {
-    console.error("Error al actualizar dispositivo:", error);
-    res.status(500).json({ mensaje: "Error al actualizar dispositivo" });
-  }
-});
-
-// Eliminar un dispositivo
-router.delete("/:id", async (req, res) => {
-  try {
-    const dispositivo = await Dispositivo.findById(req.params.id);
-    
-    if (!dispositivo) {
-      return res.status(404).json({ mensaje: "Dispositivo no encontrado" });
-    }
-    
-    // Guardar información antes de eliminar
-    const dispositivoInfo = {
-      id: dispositivo._id,
-      usuarioId: dispositivo.usuarioId,
-      nombre: dispositivo.nombre,
-      mac: dispositivo.mac
-    };
-    
-    await Dispositivo.findByIdAndDelete(req.params.id);
-    
-    // Registrar actividad
-    const usuario = await Usuario.findById(dispositivoInfo.usuarioId);
-    
-    const nuevaActividad = new HistorialActividad({
-      tipo: 'dispositivo',
-      accion: 'eliminación',
-      usuarioId: dispositivoInfo.usuarioId,
-      email: usuario ? usuario.email : null,
-      descripcion: `Dispositivo eliminado: ${dispositivoInfo.nombre} (${dispositivoInfo.mac})`,
-      detalles: {
-        mac: dispositivoInfo.mac
-      }
-    });
-    
-    await nuevaActividad.save();
-    
-    res.json({ mensaje: "Dispositivo eliminado correctamente" });
-  } catch (error) {
-    console.error("Error al eliminar dispositivo:", error);
-    res.status(500).json({ mensaje: "Error al eliminar dispositivo" });
-  }
-});
-
-// Reiniciar un dispositivo
-router.post("/:id/reiniciar", async (req, res) => {
-  try {
-    const dispositivo = await Dispositivo.findById(req.params.id);
-    
-    if (!dispositivo) {
-      return res.status(404).json({ mensaje: "Dispositivo no encontrado" });
-    }
-    
-    // Actualizar fecha de último reinicio
-    dispositivo.ultimoReinicio = new Date();
-    await dispositivo.save();
-    
-    // Registrar actividad
-    const usuario = await Usuario.findById(dispositivo.usuarioId);
-    
-    const nuevaActividad = new HistorialActividad({
-      tipo: 'dispositivo',
-      accion: 'reinicio',
-      usuarioId: dispositivo.usuarioId,
-      email: usuario ? usuario.email : null,
-      descripcion: `Dispositivo reiniciado: ${dispositivo.nombre} (${dispositivo.mac})`,
-      detalles: {
-        dispositivoId: dispositivo._id,
-        mac: dispositivo.mac
-      }
-    });
-    
-    await nuevaActividad.save();
-    
-    res.json({
-      mensaje: "Dispositivo reiniciado correctamente",
-      dispositivo
-    });
-  } catch (error) {
-    console.error("Error al reiniciar dispositivo:", error);
-    res.status(500).json({ mensaje: "Error al reiniciar dispositivo" });
-  }
-});
-
-// Obtener el total de dispositivos
-router.get("/total", async (req, res) => {
-  try {
-    const total = await Dispositivo.countDocuments();
-    res.json({ total });
-  } catch (error) {
-    console.error("Error al obtener total de dispositivos:", error);
-    res.status(500).json({ mensaje: "Error al obtener total de dispositivos" });
+    console.error("❌ Error al actualizar nivel:", error);
+    res.status(500).json({ mensaje: "Error al actualizar nivel", error: error.message });
   }
 });
 

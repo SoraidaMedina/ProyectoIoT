@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { Button, Alert, Row, Col, Form, ProgressBar } from "react-bootstrap";
+import React, { useState, useEffect, useRef } from "react";
+import { Button, Alert, Row, Col, Form } from "react-bootstrap";
+import { client, TOPICS } from "../../mqttConfig";
 
 const Dispensador = ({ setNivelAlimento }) => {
     const [status, setStatus] = useState("Esperando acciones...");
     const [loading, setLoading] = useState(false);
     const [estadoAlimento, setEstadoAlimento] = useState("verde"); // verde, amarillo, rojo
+    const [estadoServo, setEstadoServo] = useState("🔒 Cerrado");
     const [ultimaDispensacion, setUltimaDispensacion] = useState(null);
-    const esp32IP = "192.168.116.118";
+    const cantidadPersonalizadaRef = useRef(null);
     
     // Estilos para elementos del dispensador
     const styles = {
@@ -64,57 +66,68 @@ const Dispensador = ({ setNivelAlimento }) => {
         }
     };
 
-    const dispensarAlimento = async (gramos) => {
+    const dispensarAlimento = (gramos) => {
         if (loading) return;
         setLoading(true);
         setStatus(`Dispensando ${gramos} gramos...`);
 
-        try {
-            const response = await fetch(`http://${esp32IP}/dispensar?gramos=${gramos}`);
-            if (!response.ok) throw new Error("Error en la respuesta del servidor");
-
-            const data = await response.text();
-            setStatus(`✅ ${data}`);
-            setUltimaDispensacion(new Date().toLocaleString());
-            
-            // Simular animación de dispensación
-            setTimeout(() => {
-                setLoading(false);
-                setStatus("Dispensación completada con éxito");
-            }, 2000);
-            
-        } catch (error) {
-            console.error("❌ Error al comunicarse con el ESP32:", error);
-            setStatus("⚠️ Error al dispensar el alimento.");
+        // Publicar mensaje a MQTT
+        client.publish(TOPICS.DISPENSADOR, gramos.toString(), { qos: 0, retain: false });
+        
+        setUltimaDispensacion(new Date().toLocaleString());
+        
+        // Desactivamos loading después de un tiempo
+        setTimeout(() => {
             setLoading(false);
+            setStatus("Dispensación completada");
+        }, 3000);
+    };
+
+    const dispensarCantidadPersonalizada = () => {
+        const cantidad = parseInt(cantidadPersonalizadaRef.current.value);
+        if (cantidad >= 10 && cantidad <= 500) {
+            dispensarAlimento(cantidad);
+        } else {
+            setStatus("⚠️ La cantidad debe estar entre 10 y 500 gramos");
         }
     };
 
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                const response = await fetch(`http://${esp32IP}/leer`);
-                if (!response.ok) throw new Error("Error al obtener datos del ESP32");
-
-                const data = await response.json();
-                
-                // Actualizar el estado del alimento
-                setEstadoAlimento(data.color);
-                
-                // Actualizar el nivel de alimento para el componente padre
-                if (data.color === "rojo") {
+        // Manejar mensajes recibidos de MQTT
+        const handleMessage = (topic, message) => {
+            const msg = message.toString().trim();
+            
+            if (topic === TOPICS.LED) {
+                // Actualizar estado de LED según mensaje
+                if (msg === "rojo") {
+                    setEstadoAlimento("rojo");
                     setNivelAlimento("🔴 Vacío");
-                } else if (data.color === "amarillo") {
+                } else if (msg === "amarillo") {
+                    setEstadoAlimento("amarillo");
                     setNivelAlimento("🟡 Medio");
-                } else if (data.color === "verde") {
-                    setNivelAlimento("🟢 Alimento Suficiente");
+                } else if (msg === "verde") {
+                    setEstadoAlimento("verde");
+                    setNivelAlimento("🟢 Lleno");
                 }
-            } catch (error) {
-                console.error("❌ Error al obtener nivel de alimento:", error);
             }
-        }, 5000);
-
-        return () => clearInterval(interval);
+            
+            if (topic === TOPICS.SERVO) {
+                // Actualizar estado del servo
+                if (msg === "abierto") {
+                    setEstadoServo("🔓 Abierto");
+                } else if (msg === "cerrado") {
+                    setEstadoServo("🔒 Cerrado");
+                }
+            }
+        };
+        
+        // Suscribirse a los mensajes
+        client.on("message", handleMessage);
+        
+        return () => {
+            // Limpiar suscripción al desmontar el componente
+            client.off("message", handleMessage);
+        };
     }, [setNivelAlimento]);
 
     // Obtener porcentaje según el nivel de alimento
@@ -222,7 +235,6 @@ const Dispensador = ({ setNivelAlimento }) => {
                 <Col xs={6} md={3}>
                     <Button 
                         style={styles.boton}
-                        block 
                         onClick={() => dispensarAlimento(50)} 
                         disabled={loading}
                         className="w-100"
@@ -230,15 +242,25 @@ const Dispensador = ({ setNivelAlimento }) => {
                         50 gramos
                     </Button>
                 </Col>
+                <Col xs={6} md={3}>
+                    <Button 
+                        style={styles.boton}
+                        onClick={() => dispensarAlimento(100)} 
+                        disabled={loading}
+                        className="w-100"
+                    >
+                        100 gramos
+                    </Button>
+                </Col>
             </Row>
             
             <Row className="mt-3">
-                <Col md={8}>
+                <Col md={6}>
                     <Form.Group>
                         <Form.Label style={{color: "#FFC914"}}>Cantidad personalizada (g):</Form.Label>
                         <Form.Control 
                             type="number" 
-                            id="cantidadPersonalizada" 
+                            ref={cantidadPersonalizadaRef}
                             placeholder="Introducir cantidad" 
                             min="10" 
                             max="500"
@@ -246,15 +268,32 @@ const Dispensador = ({ setNivelAlimento }) => {
                         />
                     </Form.Group>
                 </Col>
+                <Col md={6} className="d-flex align-items-end">
+                    <Button 
+                        style={styles.boton}
+                        onClick={dispensarCantidadPersonalizada} 
+                        disabled={loading}
+                        className="w-100 mt-2"
+                    >
+                        Dispensar
+                    </Button>
+                </Col>
             </Row>
+            
+            <div className="mt-3 d-flex justify-content-between">
+                <span>Estado del servo: {estadoServo}</span>
+                {ultimaDispensacion && (
+                    <span>Última dispensación: {ultimaDispensacion}</span>
+                )}
+            </div>
             
             {/* Estilos para animación */}
             <style dangerouslySetInnerHTML={{
                 __html: `
                     @keyframes caer {
-                        0% { transform: translateY(0); opacity: 0; }
+                        0% { transform: translateY(0) translateX(-50%); opacity: 0; }
                         50% { opacity: 1; }
-                        100% { transform: translateY(80px); opacity: 0; }
+                        100% { transform: translateY(80px) translateX(-50%); opacity: 0; }
                     }
                 `
             }} />

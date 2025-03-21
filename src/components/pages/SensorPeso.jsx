@@ -1,30 +1,30 @@
-// SensorPeso.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { client, TOPICS } from '../../mqttConfig';
 
 const SensorPeso = () => {
-  const [peso, setPeso] = useState("Cargando...");
-  const esp32IP = "192.168.116.118"; 
+  const [peso, setPeso] = useState("Esperando datos...");
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(`http://${esp32IP}/peso`);
-        if (!response.ok) throw new Error("Error en la respuesta del servidor");
-
-        const data = await response.json();
-        setPeso(`${data.peso} g`);
-      } catch (error) {
-        console.error("❌ Error al obtener peso:", error);
-        setPeso("⚠️ Error al obtener peso");
+    // Manejar mensajes recibidos desde MQTT
+    const handleMessage = (topic, message) => {
+      if (topic === TOPICS.PESO) {
+        const valorPeso = message.toString();
+        setPeso(`${valorPeso} g`);
       }
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    };
+
+    // Suscribirse a los mensajes
+    client.on('message', handleMessage);
+
+    return () => {
+      // Limpiar suscripción al desmontar el componente
+      client.off('message', handleMessage);
+    };
   }, []);
 
   return (
     <div className="mt-4">
-      <h3>Peso del Alimento:</h3>
+      <h3 style={{color: "#FFC914"}}>Peso del Alimento:</h3>
       <p className="fs-4">{peso}</p>
     </div>
   );

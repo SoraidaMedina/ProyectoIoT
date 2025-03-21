@@ -41,6 +41,7 @@ import HistorialActividades from "./components/Admin/components/HistorialActivid
 import AdminCRUDUsuarios from "./components/admin/components/AdminCRUDUsuarios";
 import AdminCRUDTienda from "./components/admin/components/AdminCRUDTienda";
 import AdminCRUDPedidos from "./components/admin/components/AdminCRUDPedidos"
+import AdminCRUDPreguntas from "./components/admin/components/AdminCRUDPreguntas";
 
 // Importa Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -141,6 +142,7 @@ function App() {
               <Route path="crud-usuarios" element={<AdminCRUDUsuarios />} />
               <Route path="crud-tienda" element={<AdminCRUDTienda />} />
               <Route path="crud-pedidos" element={<AdminCRUDPedidos />} />
+              <Route path="crud-preguntas" element={<AdminCRUDPreguntas />} />
             </Route>
           </Routes>
           <Footer />
