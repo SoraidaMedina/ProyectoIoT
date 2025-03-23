@@ -1,10 +1,23 @@
+// src/mqttConfig.js
 import mqtt from 'mqtt';
 
-// Dirección del broker MQTT (asegúrate que Mosquitto soporte WebSockets)
-const BROKER_URL = 'ws://localhost:9001'; // Puerto WebSockets (9001)
+// Dirección del broker MQTT (usando WebSockets)
+const BROKER_URL = 'ws://192.168.68.102:9001'; // Cambia a la IP correcta de tu broker
+
+// Definición de topics MQTT
+export const TOPICS = {
+  RAIZ: 'esp32',
+  PESO: 'esp32/dispensador',
+  DISTANCIA: 'esp32/distancia',
+  LED: 'esp32/led',
+  SERVO: 'esp32/servo',
+  IP: 'esp32/ip',
+  MAC: 'esp32/mac',
+  COMANDO: 'esp32/comando'
+};
 
 const options = {
-  clientId: `react_app_${Math.random().toString(16).substr(2, 8)}`,
+  clientId: `huellitas_web_${Math.random().toString(16).substring(2, 8)}`,
   keepalive: 60,
   reconnectPeriod: 1000,
   clean: true,
@@ -13,32 +26,9 @@ const options = {
 // Crear el cliente MQTT
 const client = mqtt.connect(BROKER_URL, options);
 
-// Tópicos que usa el ESP32
-const TOPICS = {
-  // Tópicos para recibir datos del ESP32
-  PESO: 'sensores/peso',
-  DISTANCIA: 'sensores/distancia',
-  LED: 'sensores/led',
-  SERVO: 'sensores/servo',
-  MAC: 'sensores/mac',
-  IP: 'sensores/ip',
-  
-  // Tópicos para enviar comandos al ESP32
-  DISPENSADOR: 'dispensador/accion',
-  LED_CONTROL: 'led/control'
-};
-
 // Manejar eventos de conexión
 client.on('connect', () => {
-  console.log('✅ Conectado a MQTT desde el navegador');
-
-  // Suscribirse a los tópicos del ESP32
-  Object.values(TOPICS).forEach(topic => {
-    client.subscribe(topic, (err) => {
-      if (err) console.error(`❌ Error al suscribirse a ${topic}:`, err);
-      else console.log(`✅ Suscrito a ${topic}`);
-    });
-  });
+  console.log('✅ Conectado a MQTT');
 });
 
 // Manejar errores de conexión
@@ -46,16 +36,11 @@ client.on('error', (err) => {
   console.error('❌ Error de conexión MQTT:', err);
 });
 
-// Manejar la desconexión
-client.on('offline', () => {
-  console.warn('⚠️ Cliente MQTT desconectado');
-});
-
-// Manejar la reconexión
+// Manejar reconexión
 client.on('reconnect', () => {
   console.log('🔄 Intentando reconectar a MQTT...');
 });
 
-// Exportar cliente y tópicos
-export { client, TOPICS };
+// Exportar el cliente como default y también como cliente nombrado
+export { client };
 export default client;

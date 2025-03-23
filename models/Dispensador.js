@@ -1,54 +1,130 @@
-const mongoose = require("mongoose");
+// models/Dispensador.js - Con nuevas colecciones
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const dispensadorSchema = new mongoose.Schema({
-  cantidadDispensar: {
-    type: Number,
-    default: 100,
-    min: 10,
-    max: 500
+// Esquema para almacenar el estado actual del dispensador (documento único)
+const dispensadorSchema = new Schema({
+  _id: { type: String, default: 'dispensador-principal' },
+  nombre: { type: String, default: 'Dispensador Huellitas' },
+  estado: {
+    conectado: { type: Boolean, default: false },
+    ultimaConexion: { type: Date, default: Date.now }
   },
-  horaDispensacion: {
-    type: String,
-    default: "08:00",
-    validate: {
-      validator: function(v) {
-        return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-      },
-      message: props => `${props.value} no es un formato de hora válido!`
-    }
+  sensores: {
+    servo: { type: String, enum: ['abierto', 'cerrado'], default: 'cerrado' },
+    led: { type: String, enum: ['verde', 'amarillo', 'rojo', 'desconocido'], default: 'desconocido' },
+    peso: { type: Number, default: 0 },
+    distancia: { type: Number, default: 0 }
   },
-  nivelAlimento: {
-    type: String,
-    enum: ["🟢 Lleno", "🟡 Medio", "🔴 Vacío", "❓ Desconocido"],
-    default: "❓ Desconocido"
-  },
-  modoVacaciones: {
-    type: Boolean,
-    default: false
-  },
-  ultimaDispensacion: {
-    type: Date,
-    default: null
-  },
-  historialDispensaciones: [{
-    fecha: {
-      type: Date,
-      default: Date.now
-    },
-    cantidad: {
-      type: Number,
-      required: true
-    },
-    exitoso: {
-      type: Boolean,
-      default: true
-    }
-  }],
   dispositivo: {
-    ip: String,
-    ultimaConexion: Date,
-    firmware: String
-  }
-}, { timestamps: true });
+    ip: { type: String, default: 'Desconocida' },
+    mac: { type: String, default: 'Desconocida' },
+    firmware: { type: String },
+    bateria: { type: Number }, // Porcentaje de batería si es relevante
+    temperatura: { type: Number } // Temperatura del dispositivo si tiene sensor
+  },
+  configuracion: {
+    capacidadMaxima: { type: Number, default: 1000 }, // en gramos
+    cantidadDispensacion: { type: Number, default: 50 }, // en gramos
+    horariosAutomaticos: [{ 
+      hora: { type: Number },
+      minuto: { type: Number },
+      activo: { type: Boolean, default: true },
+      dias: [{ type: Number }] // 0-6 (domingo a sábado)
+    }],
+    alertaNivelBajo: { type: Number, default: 200 } // en gramos
+  },
+  mascota: {
+    id: { type: Schema.Types.ObjectId, ref: 'Mascota' },
+    nombre: { type: String },
+    peso: { type: Number }, // en kg
+    edad: { type: Number }, // en meses
+    racionDiaria: { type: Number } // en gramos
+  },
+  propietario: {
+    id: { type: Schema.Types.ObjectId, ref: 'Usuario' },
+    nombre: { type: String },
+    email: { type: String }
+  },
+  ultimaActualizacion: { type: Date, default: Date.now }
+}, { collection: 'dispensador_estado' }); // Nueva colección
 
-module.exports = mongoose.model("Dispensador", dispensadorSchema);
+// Esquema para dispensaciones (múltiples documentos para historial)
+const dispensacionSchema = new Schema({
+  dispensadorId: { type: String, required: true, default: 'dispensador-principal' },
+  tipo: { 
+    type: String, 
+    enum: ['manual', 'automatica', 'remota'], 
+    default: 'manual' 
+  },
+  estado: {
+    type: String,
+    enum: ['iniciada', 'completada', 'fallida', 'cancelada'],
+    default: 'iniciada'
+  },
+  pesoInicial: { type: Number }, // en gramos
+  pesoFinal: { type: Number }, // en gramos
+  cantidadObjetivo: { type: Number }, // en gramos
+  cantidadDispensada: { type: Number }, // en gramos
+  iniciada: { type: Date, default: Date.now },
+  finalizada: { type: Date },
+  duracion: { type: Number }, // en segundos
+  solicitadaPor: {
+    id: { type: Schema.Types.ObjectId, ref: 'Usuario' },
+    nombre: { type: String }
+  },
+  detalles: { type: Schema.Types.Mixed } // Para información adicional
+}, { collection: 'dispensador_historial' }); // Nueva colección para historial
+
+// Esquema para alertas y notificaciones
+const alertaSchema = new Schema({
+  dispensadorId: { type: String, required: true, default: 'dispensador-principal' },
+  tipo: { 
+    type: String, 
+    enum: ['nivel_bajo', 'error_dispensacion', 'bateria_baja', 'desconexion', 'conexion', 'actualizacion'],
+    required: true 
+  },
+  mensaje: { type: String, required: true },
+  nivel: { 
+    type: String, 
+    enum: ['info', 'warning', 'error', 'critical'],
+    default: 'info' 
+  },
+  fecha: { type: Date, default: Date.now },
+  leida: { type: Boolean, default: false },
+  accion: { type: String }, // Acción recomendada o ejecutada
+  detalles: { type: Schema.Types.Mixed }
+}, { collection: 'dispensador_alertas' }); // Nueva colección para alertas
+
+// Esquema para mantenimiento y calibración
+const mantenimientoSchema = new Schema({
+  dispensadorId: { type: String, required: true, default: 'dispensador-principal' },
+  tipo: { 
+    type: String, 
+    enum: ['calibracion', 'limpieza', 'reemplazo_bateria', 'actualizacion_firmware', 'otro'],
+    required: true 
+  },
+  fecha: { type: Date, default: Date.now },
+  realizado: { type: Boolean, default: true },
+  realizadoPor: {
+    id: { type: Schema.Types.ObjectId, ref: 'Usuario' },
+    nombre: { type: String }
+  },
+  descripcion: { type: String },
+  detalles: { type: Schema.Types.Mixed },
+  proximoMantenimiento: { type: Date } // Fecha recomendada del próximo mantenimiento
+}, { collection: 'dispensador_mantenimiento' }); // Nueva colección para mantenimiento
+
+// Crear modelos
+const Dispensador = mongoose.model('Dispensador', dispensadorSchema);
+const Dispensacion = mongoose.model('Dispensacion', dispensacionSchema);
+const Alerta = mongoose.model('Alerta', alertaSchema);
+const Mantenimiento = mongoose.model('Mantenimiento', mantenimientoSchema);
+
+// Exportar modelos
+module.exports = {
+  Dispensador,
+  Dispensacion,
+  Alerta,
+  Mantenimiento
+};

@@ -27,6 +27,7 @@ import EstadoDispensador from "./components/pages/EstadoDispensador";
 import PerfilPage from "./components/pages/PerfilPage";
 import RecuperarContrasena from './components/RecuperarContrasena';
 import ConfirmacionPedido from "./components/ConfirmacionPedido";
+import Dispensador from "./components/pages/Dispensador";
 
 // Importa los componentes de administración
 import AdminLayout from "./components/Admin/components/adminLayout";
@@ -101,7 +102,7 @@ function App() {
               path="/Estado-Dispensador"
               element={
                 <ProtectedRoute>
-                  <EstadoDispensador />
+                  <Dispensador />
                 </ProtectedRoute>
               }
             />

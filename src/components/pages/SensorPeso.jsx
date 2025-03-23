@@ -5,20 +5,17 @@ const SensorPeso = () => {
   const [peso, setPeso] = useState("Esperando datos...");
 
   useEffect(() => {
-    // Manejar mensajes recibidos desde MQTT
-    const handleMessage = (topic, message) => {
+    // Usar funciones anónimas directamente para evitar problemas de referencia
+    client.on('message', (topic, message) => {
       if (topic === TOPICS.PESO) {
         const valorPeso = message.toString();
         setPeso(`${valorPeso} g`);
       }
-    };
-
-    // Suscribirse a los mensajes
-    client.on('message', handleMessage);
+    });
 
     return () => {
-      // Limpiar suscripción al desmontar el componente
-      client.off('message', handleMessage);
+      // Limpiar suscripción sin referencia específica
+      client.off('message');
     };
   }, []);
 

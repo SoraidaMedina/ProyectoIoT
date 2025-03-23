@@ -394,7 +394,7 @@ const Tienda = () => {
 
                 {/* Precio */}
                 <p style={styles.productoPrecio}>
-                  {producto.precio} EUR
+                  {producto.precio} MX
                 </p>
 
                 {/* Estrellas de calificación */}
@@ -495,7 +495,7 @@ const Tienda = () => {
 
             {/* Precio (solo se muestra en el modal) */}
             <p style={styles.modalPrecio}>
-              <strong>Precio:</strong> {productoSeleccionado.precio} EUR
+              <strong>Precio:</strong> {productoSeleccionado.precio} MX
             </p>
 
             {/* Envío gratis */}
@@ -551,7 +551,7 @@ const Tienda = () => {
                         <span style={styles.resumenItemNombre}>{item.nombre}</span>
                         <span style={styles.resumenItemCantidad}>x{item.cantidad}</span>
                       </div>
-                      <span style={styles.resumenItemPrecio}>{(item.precio * item.cantidad).toFixed(2)} EUR</span>
+                      <span style={styles.resumenItemPrecio}>{(item.precio * item.cantidad).toFixed(2)} MX</span>
                     </div>
                   ))}
                   
@@ -560,14 +560,14 @@ const Tienda = () => {
                       <div style={styles.resumenItemInfo}>
                         <span style={styles.resumenItemNombre}>Envío Express</span>
                       </div>
-                      <span style={styles.resumenItemPrecio}>5.00 EUR</span>
+                      <span style={styles.resumenItemPrecio}>5.00 MX</span>
                     </div>
                   )}
                   
                   <div style={styles.resumenTotal}>
                     <span style={styles.resumenTotalTexto}>Total:</span>
                     <span style={styles.resumenTotalPrecio}>
-                      {calcularTotal(datosEnvio.metodoEnvio === "express" ? 5 : 0)} EUR
+                      {calcularTotal(datosEnvio.metodoEnvio === "express" ? 5 : 0)} MX
                     </span>
                   </div>
                 </div>

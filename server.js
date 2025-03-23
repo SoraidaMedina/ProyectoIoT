@@ -7,11 +7,25 @@ require("dotenv").config();
 const mqtt = require("mqtt");
 const mqttClient = mqtt.connect("mqtt://localhost:1883");
 
+// Configurar MQTT para temas del dispensador
+const MQTT_TOPICS = {
+  PESO: "esp32/dispensador",
+  DISTANCIA: "esp32/distancia",
+  LED: "esp32/led",
+  SERVO: "esp32/servo",
+  IP: "esp32/ip",
+  MAC: "esp32/mac",
+  COMANDO: "esp32/comando"
+};
+
 // Eventos básicos de MQTT
 mqttClient.on('connect', () => {
   console.log('✅ Conectado al servidor MQTT');
   
-  // Suscribirse a temas básicos
+  // Suscribirse a temas del dispensador
+  mqttClient.subscribe(`esp32/#`);
+  
+  // Suscribirse a temas básicos (compatibilidad con código existente)
   mqttClient.subscribe("sensores/peso");
   mqttClient.subscribe("sensores/distancia");
   mqttClient.subscribe("sensores/led");
@@ -28,6 +42,10 @@ mqttClient.on('error', (err) => {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Hacer disponible el cliente MQTT para los controladores
+app.set('mqttClient', mqttClient);
+app.set('mqttTopics', MQTT_TOPICS);
 
 // Middleware
 app.use(cors());
@@ -60,6 +78,9 @@ const adminCRUDUsuariosRoutes = require("./routes/adminCRUDUsuariosRoutes");
 const tiendaCRUDRoutes = require("./routes/tiendaCRUDRoutes");
 const procesoCompraRoutes = require("./routes/procesoCompra");
 const adminPedidosRoutes = require('./routes/adminPedidosRoutes');
+
+// Importar rutas del dispensador
+const dispensadorRoutes = require("./routes/dispensadorRoutes");
 
 // Ruta simple para verificar MQTT
 app.get('/api/mqtt-status', (req, res) => {
@@ -98,10 +119,24 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/mascotas", MascotaRoutes);
 app.use("/api/configuracion", ConfiguracionRoutes);
 
+// Usar rutas del dispensador
+app.use("/api/dispensador", dispensadorRoutes);
+
 // Conectar a MongoDB
 mongoose
   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ Conectado a MongoDB"))
+  .then(() => {
+    console.log("✅ Conectado a MongoDB");
+    
+    // Iniciar el script mqtt-to-mongo después de conectar a MongoDB
+    try {
+      // Solo si queremos cargar explícitamente el script (alternativa: ejecutarlo como proceso separado)
+      // require('./mqtt-to-mongo');
+      console.log("✅ Script mqtt-to-mongo disponible para iniciar");
+    } catch (error) {
+      console.error("❌ Error cargando script mqtt-to-mongo:", error.message);
+    }
+  })
   .catch((err) => console.error("❌ Error de conexión a MongoDB:", err));
 
 // En server.js, después de conectar a MongoDB
