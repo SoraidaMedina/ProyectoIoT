@@ -35,7 +35,7 @@ import AdminLayout from "./components/admin/components/adminLayout";
 import Dashboard from "./components/admin/components/Dashboard";
 import BuscarUsuario from "./components/admin/components/BuscarUsuario";
 import ListaUsuarios from "./components/admin/components/ListaUsuarios";
-import BuscarIoT from "./components/admin/components/BuscarIot";
+import BuscarIoT from "./components/admin/components/BuscarIoT";
 import ListaIots from "./components/admin/components/ListaIots";
 import ConfiguracionDatos from "./components/admin/components/ConfiguracionDatos";
 import PersonalizacionPanel from "./components/admin/components/PersonalizacionPanel";
