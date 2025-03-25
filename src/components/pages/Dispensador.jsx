@@ -163,12 +163,15 @@ useEffect(() => {
     }
   };
 
-  // Cargar historial de dispensaciones
+  // Cargar historial de dispensaciones (FUNCIÓN CORREGIDA)
   const cargarHistorial = async (dispensadorId) => {
     if (!dispensadorId) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/dispensador/historial?limit=5&dispensadorId=${dispensadorId}`, {
+      console.log("Cargando historial para dispensador:", dispensadorId);
+      
+      // Usar la ruta correcta para obtener el historial
+      const response = await fetch(`http://localhost:5000/api/dispensador/dispensaciones?limit=5&dispensadorId=${dispensadorId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -176,10 +179,20 @@ useEffect(() => {
         }
       });
       
-      const data = await response.json();
+      console.log("Respuesta del servidor para historial:", response.status, response.statusText);
       
-      if (response.ok) {
+      if (!response.ok) {
+        console.error('Error al cargar historial:', response.status, response.statusText);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log("Historial recibido:", data);
+      
+      if (data.success) {
         setHistorial(data.data || []);
+      } else {
+        console.error('Error en respuesta del servidor:', data.message);
       }
     } catch (err) {
       console.error('Error al cargar historial:', err);
@@ -335,19 +348,15 @@ useEffect(() => {
     
     // Enviar comando a través de la API
     try {
-      const cantidadDispensacion = dispositivoInfo?.dispositivo?.configuracion?.cantidadDispensacion || 50;
-      
-      const response = await fetch(`http://localhost:5000/api/dispositivos-usuario/${dispositivoId}/comando`, {
+      // Usar la ruta correcta de comandos del dispensador
+      const response = await fetch(`http://localhost:5000/api/dispensador/comando`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          comando: 'dispensar',
-          parametros: {
-            cantidad: cantidadDispensacion
-          }
+          comando: 'dispensar'
         })
       });
       
@@ -374,7 +383,6 @@ useEffect(() => {
       }
     }, 10000);
   };
-
   // Función para reiniciar el ESP32
   const reiniciarESP32 = async () => {
     // Solo permitir reiniciar si no está dispensando
@@ -660,32 +668,38 @@ useEffect(() => {
           </span>
         </div>
         <div className="dispensador-card-body">
-          {historial.length > 0 ? (
-            <div className="historial-tabla">
-              <div className="historial-encabezado">
-                <div className="historial-columna">Fecha</div>
-                <div className="historial-columna">Tipo</div>
-                <div className="historial-columna">Cantidad</div>
-                <div className="historial-columna">Estado</div>
-              </div>
-              {historial.map((item, index) => (
-                <div key={index} className="historial-fila">
-                  <div className="historial-columna">{formatearFecha(item.iniciada)}</div>
-                  <div className="historial-columna">{item.tipo}</div>
-                  <div className="historial-columna">{item.cantidadDispensada || item.cantidadObjetivo || '?'} g</div>
-                  <div className="historial-columna">
-                    <span className={`historial-estado ${item.estado === 'completada' ? 'exitoso' : item.estado === 'iniciada' ? 'pendiente' : 'fallido'}`}>
-                      {item.estado === 'completada' ? 'Completado' : 
-                       item.estado === 'iniciada' ? 'En curso' : 
-                       item.estado === 'fallida' ? 'Fallido' : 'Cancelado'}
-                    </span>
-                  </div>
+          {historial ? (
+            historial.length > 0 ? (
+              <div className="historial-tabla">
+                <div className="historial-encabezado">
+                  <div className="historial-columna">Fecha</div>
+                  <div className="historial-columna">Tipo</div>
+                  <div className="historial-columna">Cantidad</div>
+                  <div className="historial-columna">Estado</div>
                 </div>
-              ))}
-            </div>
+                {historial.map((item, index) => (
+                  <div key={index} className="historial-fila">
+                    <div className="historial-columna">{formatearFecha(item.iniciada)}</div>
+                    <div className="historial-columna">{item.tipo}</div>
+                    <div className="historial-columna">{item.cantidadDispensada || item.cantidadObjetivo || '?'} g</div>
+                    <div className="historial-columna">
+                      <span className={`historial-estado ${item.estado === 'completada' ? 'exitoso' : item.estado === 'iniciada' ? 'pendiente' : 'fallido'}`}>
+                        {item.estado === 'completada' ? 'Completado' : 
+                         item.estado === 'iniciada' ? 'En curso' : 
+                         item.estado === 'fallida' ? 'Fallido' : 'Cancelado'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="historial-vacio">
+                <p>No hay dispensaciones registradas</p>
+              </div>
+            )
           ) : (
-            <div className="historial-vacio">
-              <p>No hay dispensaciones registradas</p>
+            <div className="historial-cargando">
+              <p>Cargando historial...</p>
             </div>
           )}
         </div>
