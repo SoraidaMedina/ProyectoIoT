@@ -1,0 +1,175 @@
+/* Cliente.css - Estilos simples y efectivos */
+
+.client-page {
+    background-color: #fff2db;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+  
+  .client-header {
+    background-color: #1f2427;
+    color: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .client-header h1 {
+    color: #FFC914;
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .icon-title {
+    margin-right: 10px;
+  }
+  
+  /* Tarjetas de estado */
+  .status-cards {
+    margin-bottom: 40px;
+  }
+  
+  .status-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    height: 100%;
+    text-align: center;
+  }
+  
+  .status-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .status-icon-container {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px auto;
+  }
+  
+  .status-icon {
+    font-size: 30px;
+    color: white;
+  }
+  
+  .dog {
+    background-color: #3498db;
+  }
+  
+  .bone {
+    background-color: #2ecc71;
+  }
+  
+  .clock {
+    background-color: #f1c40f;
+  }
+  
+  .weight {
+    background-color: #e74c3c;
+  }
+  
+  .status-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 10px;
+  }
+  
+  .status-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+  }
+  
+  /* Encabezado de sección */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+  }
+  
+  .section-title svg {
+    margin-right: 10px;
+    color: #00515f;
+  }
+  
+  .add-device-btn {
+    background-color: #00515f;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+  }
+  
+  .add-device-btn:hover {
+    background-color: #003c46;
+  }
+  
+  /* Tarjetas de dispositivo */
+  .device-card {
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+  }
+  
+  .device-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .device-header {
+    background-color: #00515f;
+    color: white;
+    padding: 15px;
+  }
+  
+  .device-info {
+    margin-bottom: 15px;
+  }
+  
+  .device-info p {
+    margin-bottom: 5px;
+    color: #555;
+  }
+  
+  .pet-info {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+  }
+  
+  .pet-info h5 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .device-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .device-actions button {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }

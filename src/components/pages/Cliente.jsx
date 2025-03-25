@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Button, Alert, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Alert, Spinner, Badge } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { useUserContext } from "../../context/UserContext";
-import MisDispositivos from '../MisDispositivos';
+import { FaPaw, FaDog, FaBone, FaClock, FaWeight, FaInfoCircle, FaPlayCircle } from "react-icons/fa";
+import './Cliente.css';
 
 function Cliente() {
   const navigate = useNavigate();
@@ -29,13 +30,14 @@ function Cliente() {
         const data = await response.json();
         
         if (response.ok) {
-          setUserDevices(data.data);
+          console.log("Dispositivos cargados:", data.data);
+          setUserDevices(data.data || []);
         } else {
           setError(data.message || 'Error al cargar dispositivos');
         }
       } catch (err) {
+        console.error("Error al cargar dispositivos:", err);
         setError('Error de conexión al cargar dispositivos');
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -44,184 +46,222 @@ function Cliente() {
     cargarDispositivos();
   }, [token]);
 
+  // Manejar la dispensación de alimento
+  const handleDispenseFood = async (deviceId) => {
+    try {
+      // Aquí implementarías la lógica para dispensar alimento
+      console.log(`Dispensando alimento para el dispositivo ${deviceId}`);
+      
+      // Ejemplo de llamada a API para dispensar
+      const response = await fetch(`http://localhost:5000/api/dispensador/comando`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          comando: 'dispensar',
+          dispensadorId: deviceId
+        })
+      });
+      
+      if (response.ok) {
+        alert('Dispensando alimento...');
+      } else {
+        alert('Error al enviar comando de dispensación');
+      }
+    } catch (err) {
+      console.error("Error al dispensar:", err);
+      alert('Error de conexión al enviar comando');
+    }
+  };
+
   return (
-    <div style={styles.fondo}>
-      <Container className="py-5">
-        <h2 style={styles.titulo}>Bienvenido a tu Panel de Cliente</h2>
-        <p style={styles.textoCentrado}>
-          Administra tu cuenta, revisa el estado de tu dispensador y accede a tus pedidos recientes.
-        </p>
+    <div className="client-page">
+      <div className="client-header">
+        <h1><FaPaw className="icon-title" /> Bienvenido a tu Panel de Cliente</h1>
+        <p>Administra tu cuenta, revisa el estado de tu dispensador y accede a tus pedidos recientes.</p>
+      </div>
+
+      <Container>
+        {/* Resumen de estado */}
+        <Row className="status-cards">
+          <Col md={3} sm={6} className="mb-4">
+            <Card className="status-card">
+              <Card.Body>
+                <div className="status-icon-container dog">
+                  <FaDog className="status-icon" />
+                </div>
+                <Card.Title className="status-title">Mascotas Activas</Card.Title>
+                <Card.Text className="status-value">1</Card.Text>
+              </Card.Body>
+            </Card>
+          </Col>
+          
+          <Col md={3} sm={6} className="mb-4">
+            <Card className="status-card">
+              <Card.Body>
+                <div className="status-icon-container bone">
+                  <FaBone className="status-icon" />
+                </div>
+                <Card.Title className="status-title">Dispensadores</Card.Title>
+                <Card.Text className="status-value">{userDevices.length || 1}</Card.Text>
+              </Card.Body>
+            </Card>
+          </Col>
+          
+          <Col md={3} sm={6} className="mb-4">
+            <Card className="status-card">
+              <Card.Body>
+                <div className="status-icon-container clock">
+                  <FaClock className="status-icon" />
+                </div>
+                <Card.Title className="status-title">Próxima Alimentación</Card.Title>
+                <Card.Text className="status-value">07:00 PM</Card.Text>
+              </Card.Body>
+            </Card>
+          </Col>
+          
+          <Col md={3} sm={6} className="mb-4">
+            <Card className="status-card">
+              <Card.Body>
+                <div className="status-icon-container weight">
+                  <FaWeight className="status-icon" />
+                </div>
+                <Card.Title className="status-title">Estado Alimento</Card.Title>
+                <Card.Text className="status-value">780g</Card.Text>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
 
         {/* Sección de Mis Dispositivos */}
-        <div className="my-4">
-          <h3 className="mb-3">Mis Dispositivos</h3>
-          
-          {loading ? (
-            <div className="text-center my-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2">Cargando tus dispositivos...</p>
-            </div>
-          ) : error ? (
-            <Alert variant="danger">{error}</Alert>
-          ) : userDevices.length === 0 ? (
-            <Alert variant="info">
-              No tienes dispensadores registrados. ¡Registra uno nuevo para comenzar!
-              <div className="mt-3">
-                <Button 
-                  variant="primary"
-                  onClick={() => navigate('/registrar-dispositivo')}
-                >
-                  Registrar Nuevo Dispensador
-                </Button>
-              </div>
-            </Alert>
-          ) : (
-            <MisDispositivos />
-          )}
+        <div className="section-header">
+          <h2 className="section-title"><FaPaw /> Mis Dispositivos</h2>
+          <Button 
+            variant="primary"
+            className="add-device-btn"
+            onClick={() => navigate('/registrar-dispositivo')}
+          >
+            + Registrar Nuevo Dispensador
+          </Button>
         </div>
-
-        {/* Primera fila de tarjetas */}
-        <Row className="mt-4 justify-content-center">
-          <Col md={5} className="mb-4">
-            <Card style={styles.card}>
-              <Card.Body style={styles.cardBody}>
-                <Card.Title style={styles.cardTitle}>Monitoreo del Dispensador</Card.Title>
-                <Card.Text>
-                  {userDevices.length > 0 ? (
-                    <>
-                      Dispositivos activos: <strong>{userDevices.filter(d => d.estado?.activo).length}</strong><br />
-                      Total de dispositivos: <strong>{userDevices.length}</strong>
-                    </>
-                  ) : (
-                    "Registra tu primer dispensador para comenzar a monitorear."
-                  )}
-                </Card.Text>
-                <Button
-                  variant="success"
-                  style={styles.boton}
-                  onClick={() => navigate(userDevices.length > 0 ? `/Estado-Dispensador?id=${userDevices[0]?._id}` : "/registrar-dispositivo")}
-                >
-                  {userDevices.length > 0 ? "Ver detalles" : "Registrar dispositivo"}
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-
-          {/* Resto de las tarjetas... */}
-          <Col md={5} className="mb-4">
-            <Card style={styles.card}>
-              <Card.Body style={styles.cardBody}>
-                <Card.Title style={styles.cardTitle}>Perfil de tu Mascota</Card.Title>
-                <Card.Text>
-                  🐶 Nombre: <strong>Max</strong>
-                  <br />
-                  Edad: <strong>3 años</strong>
-                  <br />
-                  Raza: <strong>Labrador</strong>
-                </Card.Text>
-                <Button
-                  variant="primary"
-                  style={styles.boton}
-                  onClick={() => navigate("/perfil-mascota")}
-                >
-                  Actualizar Información
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Segunda fila de tarjetas */}
-        <Row className="mt-4 justify-content-center">
-          <Col md={5} className="mb-4">
-            <Card style={styles.card}>
-              <Card.Body style={styles.cardBody}>
-                <Card.Title style={styles.cardTitle}>Control de Dispensador</Card.Title>
-                <Card.Text>Ajusta horarios y cantidad de comida dispensada.</Card.Text>
-                <Button
-                  variant="warning"
-                  style={styles.boton}
-                  onClick={() => navigate("/configuracion-dispensador")}
-                >
-                  Configurar
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-
-          <Col md={5} className="mb-4">
-            <Card style={styles.card}>
-              <Card.Body style={styles.cardBody}>
-                <Card.Title style={styles.cardTitle}>Soporte y Ayuda</Card.Title>
-                <Card.Text>¿Tienes dudas? Contacta con nuestro equipo de soporte.</Card.Text>
-                <Button
-                  variant="danger"
-                  style={styles.boton}
-                  onClick={() => navigate("/soporte-ayuda")}
-                >
-                  Contactar
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        
+        {loading ? (
+          <div className="text-center my-5">
+            <Spinner animation="border" variant="primary" />
+            <p className="mt-2">Cargando tus dispositivos...</p>
+          </div>
+        ) : error ? (
+          <Alert variant="danger">{error}</Alert>
+        ) : userDevices.length === 0 ? (
+          <Alert variant="info">
+            No tienes dispensadores registrados. ¡Registra uno nuevo para comenzar!
+            <div className="mt-3">
+              <Button 
+                variant="primary"
+                onClick={() => navigate('/registrar-dispositivo')}
+              >
+                Registrar Nuevo Dispensador
+              </Button>
+            </div>
+          </Alert>
+        ) : (
+          <Row>
+            {/* Renderizar los dispositivos del usuario */}
+            {userDevices.map((device) => (
+              <Col key={device._id} lg={6} md={12} className="mb-4">
+                <Card className="device-card">
+                  <Card.Header className="device-header d-flex justify-content-between align-items-center">
+                    <h4 className="mb-0">{device.dispositivo?.nombre || "Dispensador Patio"}</h4>
+                    <Badge bg="success" pill>Activo</Badge>
+                  </Card.Header>
+                  <Card.Body>
+                    <div className="device-info">
+                      <p><strong>MAC:</strong> {device.dispositivo?.macAddress || "14:2B:2F:C9:1F:20"}</p>
+                      <p><strong>IP:</strong> {device.dispositivo?.ip || "192.168.1.100"}</p>
+                      <p><strong>Última conexión:</strong> {new Date().toLocaleString()}</p>
+                      
+                      {device.mascota && (
+                        <div className="pet-info mt-3">
+                          <h5><FaDog className="me-2" /> Mascota asignada</h5>
+                          <p>
+                            <strong>Nombre:</strong> {device.mascota.nombre} <br />
+                            <strong>Raza:</strong> {device.mascota.raza} <br />
+                            <strong>Edad:</strong> {device.mascota.edad} 
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="device-actions mt-3">
+                      <Button 
+                        variant="outline-primary" 
+                        className="me-2"
+                        onClick={() => navigate(`/Estado-Dispensador?id=${device._id}`)}
+                      >
+                        <FaInfoCircle className="me-1" /> Detalles
+                      </Button>
+                      <Button 
+                        variant="success"
+                        onClick={() => handleDispenseFood(device._id)}
+                      >
+                        <FaPlayCircle className="me-1" /> Dispensar
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+            
+            {/* Dispensador de ejemplo si no hay datos pero la API no retorna error */}
+            {userDevices.length === 0 && !error && (
+              <Col lg={6} md={12} className="mb-4">
+                <Card className="device-card">
+                  <Card.Header className="device-header d-flex justify-content-between align-items-center">
+                    <h4 className="mb-0">Dispensador Patio</h4>
+                    <Badge bg="success" pill>Activo</Badge>
+                  </Card.Header>
+                  <Card.Body>
+                    <div className="device-info">
+                      <p><strong>MAC:</strong> 14:2B:2F:C9:1F:20</p>
+                      <p><strong>IP:</strong> 192.168.1.100</p>
+                      <p><strong>Última conexión:</strong> {new Date().toLocaleString()}</p>
+                      
+                      <div className="pet-info mt-3">
+                        <h5><FaDog className="me-2" /> Mascota asignada</h5>
+                        <p>
+                          <strong>Nombre:</strong> Apache <br />
+                          <strong>Raza:</strong> Cali <br />
+                          <strong>Edad:</strong> 5 meses
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="device-actions mt-3">
+                      <Button 
+                        variant="outline-primary" 
+                        className="me-2"
+                        onClick={() => navigate(`/Estado-Dispensador?id=ejemplo`)}
+                      >
+                        <FaInfoCircle className="me-1" /> Detalles
+                      </Button>
+                      <Button 
+                        variant="success"
+                        onClick={() => alert('Dispensando alimento...')}
+                      >
+                        <FaPlayCircle className="me-1" /> Dispensar
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              </Col>
+            )}
+          </Row>
+        )}
       </Container>
     </div>
   );
 }
-
-// Estilos actualizados
-const styles = {
-  fondo: {
-    backgroundColor: "#fff2db",
-    minHeight: "100vh",
-    padding: "20px 0",
-  },
-  titulo: {
-    fontWeight: "bold",
-    textAlign: "center",
-    marginTop: "40px",
-  },
-  textoCentrado: {
-    textAlign: "center",
-  },
-  card: {
-    padding: "20px",
-    minHeight: "280px", // Tarjetas más largas
-    backgroundColor: "#1f2427",
-    color: "#ffffff",
-    borderRadius: "15px",
-    boxShadow: "0 6px 12px rgba(0, 0, 0, 0.3)",
-    border: "2px solid #00515f",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardTitle: {
-    color: "#FFC914", // Amarillo para los títulos
-    fontWeight: "bold",
-    fontSize: "20px",
-  },
-  cardBody: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "space-between",
-    textAlign: "center",
-    flexGrow: 1,
-  },
-  boton: {
-    width: "200px", // Tamaño fijo
-    height: "50px",
-    fontSize: "16px",
-    fontWeight: "bold",
-    textAlign: "center",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "8px",
-  },
-};
 
 export default Cliente;

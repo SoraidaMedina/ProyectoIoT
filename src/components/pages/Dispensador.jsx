@@ -1,10 +1,14 @@
-// src/components/pages/Dispensador.jsx
 import React, { useState, useEffect } from 'react';
 import client, { TOPICS } from '../../mqttConfig';
 import './Dispensador.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUserContext } from '../../context/UserContext';
 import { Alert, Spinner } from 'react-bootstrap';
+import { 
+  FaInfo, FaWifi, FaClock, FaWeight, FaMemory, FaNetworkWired, 
+  FaHistory, FaMicrochip, FaThermometerHalf, FaTachometerAlt,
+  FaBars, FaUtensils, FaPowerOff
+} from 'react-icons/fa';
 
 const Dispensador = () => {
   const location = useLocation();
@@ -383,6 +387,7 @@ useEffect(() => {
       }
     }, 10000);
   };
+
   // Función para reiniciar el ESP32
   const reiniciarESP32 = async () => {
     // Solo permitir reiniciar si no está dispensando
@@ -476,22 +481,29 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <div className="text-center my-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-2">Cargando información del dispensador...</p>
+      <div className="text-center my-5 loading-container">
+        <div className="loading-spinner">
+          <Spinner animation="border" variant="primary" />
+        </div>
+        <p className="mt-3 loading-text">Cargando información del dispensador...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="danger" className="my-4">
+      <Alert variant="danger" className="error-alert">
         <Alert.Heading>Error al cargar el dispensador</Alert.Heading>
         <p>{error}</p>
         <hr />
         <p className="mb-0">
           Verifica que el dispensador exista y tengas permisos para acceder.
         </p>
+        <div className="error-actions">
+          <button className="error-button" onClick={() => navigate('/cliente')}>
+            Volver a Mis Dispositivos
+          </button>
+        </div>
       </Alert>
     );
   }
@@ -513,6 +525,7 @@ useEffect(() => {
         </h1>
         <div className="dispensador-status">
           <span className={`dispositivo-status ${client.connected ? 'conectado' : 'desconectado'}`}>
+            <FaWifi className="icon-status" />
             {client.connected ? 'Conectado' : 'Desconectado'}
           </span>
         </div>
@@ -525,27 +538,27 @@ useEffect(() => {
           {/* Tarjeta de información del dispositivo */}
           <div className="dispensador-card">
             <div className="dispensador-card-header">
-              <h2>Información del Dispositivo</h2>
+              <h2><FaInfo /> Información del Dispositivo</h2>
               <span className="dispensador-card-icon">
-                <i className="fas fa-microchip"></i>
+                <FaMicrochip />
               </span>
             </div>
             <div className="dispensador-card-body">
               <div className="dispositivo-info">
                 <div className="info-item">
-                  <span className="info-label">Dirección IP:</span>
+                  <span className="info-label"><FaNetworkWired /> Dirección IP:</span>
                   <span className="info-valor">{deviceData.ip || 'Desconocida'}</span>
                 </div>
                 <div className="info-item">
-                  <span className="info-label">Dirección MAC:</span>
+                  <span className="info-label"><FaMemory /> Dirección MAC:</span>
                   <span className="info-valor">{deviceData.mac || 'Desconocida'}</span>
                 </div>
                 <div className="info-item">
-                  <span className="info-label">Última Actualización:</span>
+                  <span className="info-label"><FaClock /> Última Actualización:</span>
                   <span className="info-valor">{formatearFecha(new Date())}</span>
                 </div>
                 <div className="info-item">
-                  <span className="info-label">Última Dispensación:</span>
+                  <span className="info-label"><FaHistory /> Última Dispensación:</span>
                   <span className="info-valor">{formatearFecha(deviceData.ultimaDispensacion)}</span>
                 </div>
               </div>
@@ -555,9 +568,9 @@ useEffect(() => {
           {/* Tarjeta de peso del alimento */}
           <div className="dispensador-card">
             <div className="dispensador-card-header">
-              <h2>Peso del Alimento</h2>
+              <h2><FaWeight /> Peso del Alimento</h2>
               <span className="dispensador-card-icon">
-                <i className="fas fa-weight"></i>
+                <FaWeight />
               </span>
             </div>
             <div className="dispensador-card-body">
@@ -579,9 +592,9 @@ useEffect(() => {
           {/* Tarjeta de estado de sensores */}
           <div className="dispensador-card">
             <div className="dispensador-card-header">
-              <h2>Estado de Sensores</h2>
+              <h2><FaThermometerHalf /> Estado de Sensores</h2>
               <span className="dispensador-card-icon">
-                <i className="fas fa-tachometer-alt"></i>
+                <FaTachometerAlt />
               </span>
             </div>
             <div className="dispensador-card-body">
@@ -622,9 +635,9 @@ useEffect(() => {
           {/* Tarjeta de control del dispensador */}
           <div className="dispensador-card">
             <div className="dispensador-card-header">
-              <h2>Control del Dispensador</h2>
+              <h2><FaBars /> Control del Dispensador</h2>
               <span className="dispensador-card-icon">
-                <i className="fas fa-sliders-h"></i>
+                <FaBars />
               </span>
             </div>
             <div className="dispensador-card-body">
@@ -635,10 +648,7 @@ useEffect(() => {
                   disabled={botonDeshabilitado}
                 >
                   <span className="boton-icono">
-                    {deviceData.dispensando ? 
-                      <i className="fas fa-spinner fa-spin"></i> : 
-                      <i className="fas fa-utensils"></i>
-                    }
+                    <FaUtensils />
                   </span>
                   <span className="boton-texto">{getTextoBoton()}</span>
                 </button>
@@ -649,7 +659,7 @@ useEffect(() => {
                   disabled={deviceData.dispensando}
                 >
                   <span className="boton-icono">
-                    <i className="fas fa-power-off"></i>
+                    <FaPowerOff />
                   </span>
                   <span className="boton-texto">Reiniciar Dispositivo</span>
                 </button>
@@ -662,9 +672,9 @@ useEffect(() => {
       {/* Sección de historial de dispensaciones */}
       <div className="dispensador-card dispensador-historial">
         <div className="dispensador-card-header">
-          <h2>Historial de Dispensaciones</h2>
+          <h2><FaHistory /> Historial de Dispensaciones</h2>
           <span className="dispensador-card-icon">
-            <i className="fas fa-history"></i>
+            <FaHistory />
           </span>
         </div>
         <div className="dispensador-card-body">
@@ -699,6 +709,7 @@ useEffect(() => {
             )
           ) : (
             <div className="historial-cargando">
+              <Spinner animation="border" size="sm" className="me-2" />
               <p>Cargando historial...</p>
             </div>
           )}
