@@ -1,21 +1,30 @@
+// server.js
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+// Importar configuración
+const config = require("./config");
+
 // Configuración básica de MQTT - Solo lo esencial
 const mqtt = require("mqtt");
-const mqttClient = mqtt.connect("mqtt://localhost:1883");
+const mqttClient = mqtt.connect(config.mqtt.broker || "mqtt://localhost:1883");
+
+// Importar el gestor MQTT
+const MQTTManager = require("./utils/mqttManager");
+const mqttManager = new MQTTManager(config);
 
 // Configurar MQTT para temas del dispensador
 const MQTT_TOPICS = {
-  PESO: "esp32/dispensador",
-  DISTANCIA: "esp32/distancia",
-  LED: "esp32/led",
-  SERVO: "esp32/servo",
-  IP: "esp32/ip",
-  MAC: "esp32/mac",
-  COMANDO: "esp32/comando"
+  RAIZ: config.mqtt.topicRoot || "esp32",
+  PESO: "dispensador",
+  DISTANCIA: "distancia",
+  LED: "led",
+  SERVO: "servo",
+  IP: "ip",
+  MAC: "mac",
+  COMANDO: "comando"
 };
 
 // Eventos básicos de MQTT
@@ -23,7 +32,7 @@ mqttClient.on('connect', () => {
   console.log('✅ Conectado al servidor MQTT');
   
   // Suscribirse a temas del dispensador
-  mqttClient.subscribe(`esp32/#`);
+  mqttClient.subscribe(`${MQTT_TOPICS.RAIZ}/#`);
   
   // Suscribirse a temas básicos (compatibilidad con código existente)
   mqttClient.subscribe("sensores/peso");
@@ -46,6 +55,7 @@ const PORT = process.env.PORT || 5000;
 // Hacer disponible el cliente MQTT para los controladores
 app.set('mqttClient', mqttClient);
 app.set('mqttTopics', MQTT_TOPICS);
+app.set('mqttManager', mqttManager); // Para funciones avanzadas
 
 // Middleware
 app.use(cors());
@@ -82,17 +92,21 @@ const adminPedidosRoutes = require('./routes/adminPedidosRoutes');
 // Importar rutas del dispensador
 const dispensadorRoutes = require("./routes/dispensadorRoutes");
 
+// Importar nuevas rutas de dispositivos
+const dispositivosUsuariosRoutes = require("./routes/dispositivosUsuariosRoutes");
+
 // Ruta simple para verificar MQTT
 app.get('/api/mqtt-status', (req, res) => {
   res.json({
     mqtt: {
-      conectado: mqttClient.connected
+      conectado: mqttClient.connected,
+      dispositivosConectados: Array.from(mqttManager.macsDetectadas?.keys() || [])
     }
   });
 });
 
+// Usar rutas existentes
 app.use("/api/proceso_compra", procesoCompraRoutes);
-//rutas administrador
 app.use("/api/iot", iotRoutes);
 app.use("/api/admin/usuarios", adminUsuariosRoutes);
 app.use("/api", dashboardRoutes);
@@ -104,8 +118,6 @@ app.use('/api/upload', uploadRoutes);
 app.use("/api/admin/crud/usuarios", adminCRUDUsuariosRoutes);
 app.use("/api/admin/crud/tienda", tiendaCRUDRoutes);
 app.use("/api/admin/pedidos", adminPedidosRoutes);
-
-// Usar rutas existentes
 app.use("/api/tienda", tiendaRoutes);
 app.use("/api/slider", sliderRoutes);
 app.use("/api/inicio", inicioRoutes);
@@ -122,24 +134,18 @@ app.use("/api/configuracion", ConfiguracionRoutes);
 // Usar rutas del dispensador
 app.use("/api/dispensador", dispensadorRoutes);
 
+// Usar rutas de dispositivos usuario
+app.use("/api/dispositivos-usuario", dispositivosUsuariosRoutes);
+
 // Conectar a MongoDB
 mongoose
   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log("✅ Conectado a MongoDB");
-    
-    // Iniciar el script mqtt-to-mongo después de conectar a MongoDB
-    try {
-      // Solo si queremos cargar explícitamente el script (alternativa: ejecutarlo como proceso separado)
-      // require('./mqtt-to-mongo');
-      console.log("✅ Script mqtt-to-mongo disponible para iniciar");
-    } catch (error) {
-      console.error("❌ Error cargando script mqtt-to-mongo:", error.message);
-    }
   })
   .catch((err) => console.error("❌ Error de conexión a MongoDB:", err));
 
-// En server.js, después de conectar a MongoDB
+// Verificar conexión a Cloudinary
 const { testConnection } = require('./utils/cloudinaryUtils');
 testConnection()
   .then(connected => {

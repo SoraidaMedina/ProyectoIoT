@@ -70,7 +70,14 @@ function Login() {
 
       if (response.ok) {
         alert(`¡Bienvenido, ${result.usuario.nombre}!`);
-        login(result.usuario);
+        
+        // Asegurarse de guardar el usuario y el token
+        const userData = {
+          ...result.usuario,
+          token: result.token // Incluir el token en el objeto de usuario
+        };
+        
+        login(userData);
         
         // Redirige según el rol del usuario
         if (result.usuario.role === "admin") {

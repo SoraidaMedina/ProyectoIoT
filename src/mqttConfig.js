@@ -1,46 +1,45 @@
 // src/mqttConfig.js
 import mqtt from 'mqtt';
 
-// Dirección del broker MQTT (usando WebSockets)
-const BROKER_URL = 'ws://192.168.68.102:9001'; // Cambia a la IP correcta de tu broker
+// Usar WebSockets para conexión desde el navegador
+const MQTT_BROKER = 'ws://localhost:9001'; // Usando WebSockets para navegador
 
-// Definición de topics MQTT
+// Configurar topics de MQTT
 export const TOPICS = {
   RAIZ: 'esp32',
-  PESO: 'esp32/dispensador',
-  DISTANCIA: 'esp32/distancia',
-  LED: 'esp32/led',
-  SERVO: 'esp32/servo',
-  IP: 'esp32/ip',
-  MAC: 'esp32/mac',
-  COMANDO: 'esp32/comando'
+  PESO: 'dispensador',
+  DISTANCIA: 'distancia',
+  LED: 'led',
+  SERVO: 'servo',
+  IP: 'ip',
+  MAC: 'mac',
+  COMANDO: 'comando'
 };
 
+// Crear cliente MQTT
 const options = {
-  clientId: `huellitas_web_${Math.random().toString(16).substring(2, 8)}`,
-  keepalive: 60,
-  reconnectPeriod: 1000,
+  clientId: `mqtt-huellitas-web-${Math.random().toString(16).substring(2, 8)}`,
   clean: true,
+  connectTimeout: 4000,
+  reconnectPeriod: 1000
 };
 
-// Crear el cliente MQTT
-const client = mqtt.connect(BROKER_URL, options);
+// Crear cliente MQTT - Exportándolo como default y como named export
+const client = mqtt.connect(MQTT_BROKER, options);
 
-// Manejar eventos de conexión
+// Configurar manejadores de eventos básicos
 client.on('connect', () => {
-  console.log('✅ Conectado a MQTT');
+  console.log('Conectado al broker MQTT');
 });
 
-// Manejar errores de conexión
 client.on('error', (err) => {
-  console.error('❌ Error de conexión MQTT:', err);
+  console.error('Error MQTT:', err);
 });
 
-// Manejar reconexión
-client.on('reconnect', () => {
-  console.log('🔄 Intentando reconectar a MQTT...');
+client.on('offline', () => {
+  console.log('MQTT desconectado');
 });
 
-// Exportar el cliente como default y también como cliente nombrado
+// Exportación por defecto y con nombre para compatibilidad
 export { client };
 export default client;

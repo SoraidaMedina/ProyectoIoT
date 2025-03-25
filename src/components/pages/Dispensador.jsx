@@ -1,9 +1,20 @@
 // src/components/pages/Dispensador.jsx
 import React, { useState, useEffect } from 'react';
 import client, { TOPICS } from '../../mqttConfig';
-import './Dispensador.css'; // Asegúrate de crear este archivo CSS
+import './Dispensador.css';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useUserContext } from '../../context/UserContext';
+import { Alert, Spinner } from 'react-bootstrap';
 
 const Dispensador = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { token } = useUserContext();
+  const [dispositivoId, setDispositivoId] = useState(null);
+  const [dispositivoInfo, setDispositivoInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   // Estado unificado para todos los datos
   const [deviceData, setDeviceData] = useState({
     // Información del dispositivo
@@ -40,19 +51,147 @@ const Dispensador = () => {
     disponible: 800 // gramos
   });
 
-  useEffect(() => {
-    // Generar datos de historial de ejemplo
-    const historialEjemplo = [
-      { fecha: new Date(Date.now() - 86400000), cantidad: 50, exitoso: true },
-      { fecha: new Date(Date.now() - 172800000), cantidad: 50, exitoso: true },
-      { fecha: new Date(Date.now() - 259200000), cantidad: 30, exitoso: false },
-      { fecha: new Date(Date.now() - 345600000), cantidad: 50, exitoso: true },
-    ];
-    setHistorial(historialEjemplo);
+// Actualizar este bloque del useEffect en Dispensador.jsx
+useEffect(() => {
+  const queryParams = new URLSearchParams(location.search);
+  let id = queryParams.get('id');
+  
+  console.log("ID desde URL:", id);
+  
+  // Si no hay ID en la URL, intentar recuperarlo de sessionStorage
+  if (!id) {
+    id = sessionStorage.getItem('dispensadorActual');
+    console.log("ID desde sessionStorage:", id);
     
-    // Calcular capacidad disponible basada en el peso
+    // Si se encontró el ID en sessionStorage, actualizar la URL
+    if (id) {
+      navigate(`/Estado-Dispensador?id=${id}`, { replace: true });
+    } else {
+      // NUEVO: Si no hay ID ni en URL ni en sessionStorage, redirigir a Cliente
+      navigate('/cliente', { replace: true });
+      return; // ¡IMPORTANTE! Detener la ejecución del resto del useEffect
+    }
+  } else {
+    // Guardar ID en sessionStorage para recuperarlo si la página se recarga
+    sessionStorage.setItem('dispensadorActual', id);
+  }
+  
+  if (id) {
+    setDispositivoId(id);
+    cargarDispositivo(id);
+  } else {
+    setError('No se ha especificado un dispositivo');
+    setLoading(false);
+  }
+}, [location, navigate]);
+
+  // Cargar información del dispositivo
+  const cargarDispositivo = async (id) => {
+    try {
+      console.log("Intentando cargar dispositivo con ID:", id);
+      console.log("Token disponible:", token ? "Sí" : "No");
+      
+      if (!token) {
+        setError('No hay un token de autenticación válido. Por favor, inicia sesión de nuevo.');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch(`http://localhost:5000/api/dispositivos-usuario/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log("Respuesta del servidor:", response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error del servidor:", errorText);
+        setError(`Error del servidor (${response.status}): ${response.statusText}`);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const data = await response.json();
+        console.log("Datos recibidos:", data);
+        
+        if (data.success) {
+          setDispositivoInfo(data.data);
+          
+          // Actualizar datos iniciales del dispositivo
+          if (data.data.dispensador) {
+            const dispensador = data.data.dispensador;
+            setDeviceData(prev => ({
+              ...prev,
+              ip: dispensador.dispositivo?.ip || 'Desconocida',
+              mac: dispensador.dispositivo?.mac || 'Desconocida',
+              peso: dispensador.sensores?.peso || 0,
+              distancia: dispensador.sensores?.distancia || 0,
+              estadoLed: dispensador.sensores?.led || 'desconocido',
+              estadoServo: dispensador.sensores?.servo || 'cerrado',
+              dispensando: dispensador.sensores?.servo === 'abierto'
+            }));
+            
+            // Configurar capacidad del contenedor
+            if (dispensador.configuracion) {
+              setCapacidadContenedor(prev => ({
+                ...prev,
+                total: dispensador.configuracion.capacidadMaxima || 1000,
+                disponible: Math.max(0, (dispensador.configuracion.capacidadMaxima || 1000) - (dispensador.sensores?.peso || 0))
+              }));
+            }
+          }
+          
+          // Cargar historial
+          cargarHistorial(data.data.dispensador?._id);
+        } else {
+          setError(data.message || 'Error al cargar datos del dispositivo');
+        }
+      } catch (jsonError) {
+        console.error("Error al procesar JSON:", jsonError);
+        setError('Error al procesar la respuesta del servidor');
+      }
+    } catch (err) {
+      console.error("Error detallado:", err);
+      setError(`Error de conexión al cargar dispositivo: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar historial de dispensaciones
+  const cargarHistorial = async (dispensadorId) => {
+    if (!dispensadorId) return;
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/dispensador/historial?limit=5&dispensadorId=${dispensadorId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setHistorial(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error al cargar historial:', err);
+    }
+  };
+
+  useEffect(() => {
+    // Actualizar capacidad disponible basada en el peso
     const disponible = Math.max(0, capacidadContenedor.total - deviceData.peso);
     setCapacidadContenedor(prev => ({...prev, disponible}));
+    
+    if (!dispositivoInfo) return;
     
     // Manejar mensajes recibidos desde MQTT
     const handleMessage = (topic, message) => {
@@ -62,69 +201,84 @@ const Dispensador = () => {
       // Extraer el subtopic del topic completo (ej: "esp32/led" -> "led")
       const subtopic = topic.substring(topic.lastIndexOf('/') + 1);
       
-      // Actualizar el estado según el subtopic
-      setDeviceData(prevData => {
-        const newData = { ...prevData };
+      // Verificar que el mensaje pertenece a nuestro dispositivo (por MAC)
+      if (dispositivoInfo?.dispositivo?.macAddress) {
+        const dispensadorMAC = dispositivoInfo.dispositivo.macAddress.toUpperCase();
         
-        switch (subtopic) {
-          case 'ip':
-            newData.ip = msg;
-            break;
-            
-          case 'mac':
-            newData.mac = msg;
-            break;
-            
-          case 'dispensador':
-            newData.peso = parseInt(msg, 10);
-            // Actualizar también la capacidad disponible
-            const disponible = Math.max(0, capacidadContenedor.total - parseInt(msg, 10));
-            setCapacidadContenedor(prev => ({...prev, disponible}));
-            break;
-            
-          case 'distancia':
-            newData.distancia = parseFloat(msg);
-            break;
-            
-          case 'led':
-            newData.estadoLed = msg;
-            break;
-            
-          case 'servo':
-            // Si el servo cambia de estado, actualizar el estado de dispensación
-            if (msg === 'abierto') {
-              newData.dispensando = true;
-              newData.estadoServo = 'abierto';
+        // Actualizar el estado según el subtopic
+        setDeviceData(prevData => {
+          const newData = { ...prevData };
+          
+          switch (subtopic) {
+            case 'ip':
+              newData.ip = msg;
+              break;
               
-              // Mostrar notificación
-              mostrarNotificacion('Dispensación en progreso...', 'info');
-            } else if (msg === 'cerrado') {
-              if (newData.dispensando) {
-                // Si estaba dispensando y ahora se cerró, registrar en historial
-                const nuevaDispensacion = {
-                  fecha: new Date(),
-                  cantidad: 50,
-                  exitoso: true
-                };
-                setHistorial(prev => [nuevaDispensacion, ...prev]);
-                
-                // Mostrar notificación de éxito
-                mostrarNotificacion('Dispensación completada con éxito', 'success');
-                
-                // Actualizar última dispensación
-                newData.ultimaDispensacion = new Date();
+            case 'mac':
+              // Solo procesar si es el MAC de nuestro dispositivo
+              if (msg.toUpperCase() === dispensadorMAC) {
+                newData.mac = msg;
               }
+              break;
               
-              newData.dispensando = false;
-              newData.estadoServo = 'cerrado';
-              // Desbloquear el botón cuando el servo se cierra
-              setBotonBloqueado(false);
-            }
-            break;
-        }
-        
-        return newData;
-      });
+            case 'dispensador':
+            case 'peso':
+              // Solo procesar si es nuestro dispositivo
+              if (newData.mac.toUpperCase() === dispensadorMAC) {
+                newData.peso = parseInt(msg, 10);
+                // Actualizar también la capacidad disponible
+                const disponible = Math.max(0, capacidadContenedor.total - parseInt(msg, 10));
+                setCapacidadContenedor(prev => ({...prev, disponible}));
+              }
+              break;
+              
+            case 'distancia':
+              if (newData.mac.toUpperCase() === dispensadorMAC) {
+                newData.distancia = parseFloat(msg);
+              }
+              break;
+              
+            case 'led':
+              if (newData.mac.toUpperCase() === dispensadorMAC) {
+                newData.estadoLed = msg;
+              }
+              break;
+              
+            case 'servo':
+              if (newData.mac.toUpperCase() === dispensadorMAC) {
+                // Si el servo cambia de estado, actualizar el estado de dispensación
+                if (msg === 'abierto') {
+                  newData.dispensando = true;
+                  newData.estadoServo = 'abierto';
+                  
+                  // Mostrar notificación
+                  mostrarNotificacion('Dispensación en progreso...', 'info');
+                } else if (msg === 'cerrado') {
+                  if (newData.dispensando) {
+                    // Si estaba dispensando y ahora se cerró, actualizar historial
+                    setTimeout(() => {
+                      cargarHistorial(dispositivoInfo.dispensador?._id);
+                    }, 1000);
+                    
+                    // Mostrar notificación de éxito
+                    mostrarNotificacion('Dispensación completada con éxito', 'success');
+                    
+                    // Actualizar última dispensación
+                    newData.ultimaDispensacion = new Date();
+                  }
+                  
+                  newData.dispensando = false;
+                  newData.estadoServo = 'cerrado';
+                  // Desbloquear el botón cuando el servo se cierra
+                  setBotonBloqueado(false);
+                }
+              }
+              break;
+          }
+          
+          return newData;
+        });
+      }
     };
 
     // Suscribirse al topic raíz con wildcard para recibir todos los subtopics
@@ -136,7 +290,7 @@ const Dispensador = () => {
         mostrarNotificacion(`Error al conectar con el dispositivo: ${err.message}`, 'error');
       } else {
         console.log(`Suscrito a ${topic}`);
-        mostrarNotificacion('Conectado al dispositivo', 'success');
+        mostrarNotificacion('Conectado al servicio de dispensador', 'success');
       }
     });
 
@@ -148,7 +302,7 @@ const Dispensador = () => {
       client.off('message', handleMessage);
       client.unsubscribe(topic);
     };
-  }, []);
+  }, [dispositivoInfo, capacidadContenedor.total]);
 
   // Función para mostrar notificaciones
   const mostrarNotificacion = (mensaje, tipo = 'info') => {
@@ -164,14 +318,14 @@ const Dispensador = () => {
     }, 5000);
   };
 
-  // Función para dispensar 50 gramos de alimento
-  const dispensar50Gramos = () => {
+  // Función para dispensar alimento
+  const dispensarAlimento = async () => {
     // Verificar si el botón está bloqueado o el dispensador ya está activo
     if (botonBloqueado || deviceData.dispensando) {
       return;
     }
     
-    console.log("Dispensando 50 gramos de alimento");
+    console.log("Enviando comando para dispensar alimento");
     
     // Bloquear el botón temporalmente para evitar múltiples clics
     setBotonBloqueado(true);
@@ -179,8 +333,37 @@ const Dispensador = () => {
     // Mostrar notificación
     mostrarNotificacion('Enviando comando de dispensación...', 'info');
     
-    // Publicar mensaje a MQTT
-    client.publish(TOPICS.COMANDO, "dispensar");
+    // Enviar comando a través de la API
+    try {
+      const cantidadDispensacion = dispositivoInfo?.dispositivo?.configuracion?.cantidadDispensacion || 50;
+      
+      const response = await fetch(`http://localhost:5000/api/dispositivos-usuario/${dispositivoId}/comando`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          comando: 'dispensar',
+          parametros: {
+            cantidad: cantidadDispensacion
+          }
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        mostrarNotificacion('Comando enviado correctamente', 'success');
+      } else {
+        mostrarNotificacion(data.message || 'Error al enviar comando', 'error');
+        setBotonBloqueado(false);
+      }
+    } catch (err) {
+      console.error('Error al enviar comando:', err);
+      mostrarNotificacion('Error de conexión al enviar comando', 'error');
+      setBotonBloqueado(false);
+    }
     
     // Timeout de seguridad: si después de 10 segundos no recibimos confirmación, desbloqueamos el botón
     setTimeout(() => {
@@ -193,11 +376,34 @@ const Dispensador = () => {
   };
 
   // Función para reiniciar el ESP32
-  const reiniciarESP32 = () => {
+  const reiniciarESP32 = async () => {
     // Solo permitir reiniciar si no está dispensando
     if (!deviceData.dispensando) {
-      mostrarNotificacion('Reiniciando dispositivo...', 'warning');
-      client.publish(TOPICS.COMANDO, "restart");
+      mostrarNotificacion('Enviando comando de reinicio...', 'warning');
+      
+      try {
+        const response = await fetch(`http://localhost:5000/api/dispositivos-usuario/${dispositivoId}/comando`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            comando: 'restart'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          mostrarNotificacion('Comando de reinicio enviado correctamente', 'success');
+        } else {
+          mostrarNotificacion(data.message || 'Error al enviar comando de reinicio', 'error');
+        }
+      } catch (err) {
+        console.error('Error al enviar comando de reinicio:', err);
+        mostrarNotificacion('Error de conexión al enviar comando de reinicio', 'error');
+      }
     } else {
       mostrarNotificacion('No se puede reiniciar mientras está dispensando', 'error');
       console.log("No se puede reiniciar mientras está dispensando");
@@ -233,7 +439,7 @@ const Dispensador = () => {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    }).format(fecha);
+    }).format(new Date(fecha));
   };
 
   // Calcular el porcentaje de capacidad
@@ -256,9 +462,31 @@ const Dispensador = () => {
     } else if (botonBloqueado) {
       return 'Enviando comando...';
     } else {
-      return 'Dispensar 50 gramos';
+      return `Dispensar ${dispositivoInfo?.dispositivo?.configuracion?.cantidadDispensacion || 50} gramos`;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="text-center my-5">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-2">Cargando información del dispensador...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="danger" className="my-4">
+        <Alert.Heading>Error al cargar el dispensador</Alert.Heading>
+        <p>{error}</p>
+        <hr />
+        <p className="mb-0">
+          Verifica que el dispensador exista y tengas permisos para acceder.
+        </p>
+      </Alert>
+    );
+  }
 
   return (
     <div className="dispensador-container">
@@ -273,7 +501,7 @@ const Dispensador = () => {
       <div className="dispensador-header">
         <h1 className="dispensador-titulo">
           <img src="/img/logo-huellitas.png" alt="Logo Huellitas" className="dispensador-logo" />
-          Control del Dispensador IoT
+          {dispositivoInfo?.dispositivo?.nombre || 'Control del Dispensador'}
         </h1>
         <div className="dispensador-status">
           <span className={`dispositivo-status ${client.connected ? 'conectado' : 'desconectado'}`}>
@@ -395,7 +623,7 @@ const Dispensador = () => {
               <div className="dispensador-controles">
                 <button 
                   className={`boton-dispensar ${botonDeshabilitado ? 'boton-deshabilitado' : ''} ${deviceData.dispensando ? 'dispensando' : ''}`}
-                  onClick={dispensar50Gramos}
+                  onClick={dispensarAlimento}
                   disabled={botonDeshabilitado}
                 >
                   <span className="boton-icono">
@@ -436,16 +664,20 @@ const Dispensador = () => {
             <div className="historial-tabla">
               <div className="historial-encabezado">
                 <div className="historial-columna">Fecha</div>
+                <div className="historial-columna">Tipo</div>
                 <div className="historial-columna">Cantidad</div>
                 <div className="historial-columna">Estado</div>
               </div>
               {historial.map((item, index) => (
                 <div key={index} className="historial-fila">
-                  <div className="historial-columna">{formatearFecha(item.fecha)}</div>
-                  <div className="historial-columna">{item.cantidad} g</div>
+                  <div className="historial-columna">{formatearFecha(item.iniciada)}</div>
+                  <div className="historial-columna">{item.tipo}</div>
+                  <div className="historial-columna">{item.cantidadDispensada || item.cantidadObjetivo || '?'} g</div>
                   <div className="historial-columna">
-                    <span className={`historial-estado ${item.exitoso ? 'exitoso' : 'fallido'}`}>
-                      {item.exitoso ? 'Completado' : 'Fallido'}
+                    <span className={`historial-estado ${item.estado === 'completada' ? 'exitoso' : item.estado === 'iniciada' ? 'pendiente' : 'fallido'}`}>
+                      {item.estado === 'completada' ? 'Completado' : 
+                       item.estado === 'iniciada' ? 'En curso' : 
+                       item.estado === 'fallida' ? 'Fallido' : 'Cancelado'}
                     </span>
                   </div>
                 </div>

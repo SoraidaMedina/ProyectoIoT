@@ -30,12 +30,23 @@ exports.getEstadoDispensador = async (req, res) => {
 // Obtener historial de dispensaciones
 exports.getHistorialDispensaciones = async (req, res) => {
   try {
-    const { limit = 10, page = 1, tipo, estado, desde, hasta } = req.query;
+    const { limit = 10, page = 1, tipo, estado, desde, hasta, dispensadorId } = req.query;
     const skip = (page - 1) * limit;
     
-    // Construir filtro
-    let filtro = { dispensadorId: 'dispensador-principal' };
+    console.log("Parámetros recibidos:", { limit, page, dispensadorId });
     
+    // Construir filtro con el dispensadorId proporcionado
+    let filtro = {};
+    
+    // Usar el dispensadorId desde los parámetros de consulta
+    if (dispensadorId) {
+      filtro.dispensadorId = dispensadorId;
+    } else {
+      // Valor predeterminado si no se proporciona
+      filtro.dispensadorId = 'dispensador-principal';
+    }
+    
+    // Resto del filtro igual que antes
     if (tipo) filtro.tipo = tipo;
     if (estado) filtro.estado = estado;
     
@@ -45,6 +56,8 @@ exports.getHistorialDispensaciones = async (req, res) => {
       if (desde) filtro.iniciada.$gte = new Date(desde);
       if (hasta) filtro.iniciada.$lte = new Date(hasta);
     }
+    
+    console.log("Filtro aplicado:", filtro);
     
     // Obtener dispensaciones y contar total
     const [dispensaciones, total] = await Promise.all([

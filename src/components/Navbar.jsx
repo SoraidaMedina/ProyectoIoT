@@ -116,11 +116,14 @@ function NavigationBar() {
                       id="iot-dropdown"
                       className="text-white"
                     >
+                      <NavDropdown.Item as={NavLink} to="/registrar-dispositivo">
+                        <FaPaw className="me-2" /> Registrar Dispositivo
+                      </NavDropdown.Item>
                       <NavDropdown.Item as={NavLink} to="/Estado-Dispensador">
                         <FaTachometerAlt className="me-2" /> Estado IoT
                       </NavDropdown.Item>
-                      <NavDropdown.Item as={NavLink} to="/configuracion-dispensador">
-                        <FaCog className="me-2" /> Configuración
+                      <NavDropdown.Item as={NavLink} to="/cliente">
+                        <FaTachometerAlt className="me-2" /> Mis Dispositivos
                       </NavDropdown.Item>
                     </NavDropdown>
 

@@ -1,9 +1,48 @@
-import React from "react";
-import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Card, Button, Alert, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import { useUserContext } from "../../context/UserContext";
+import MisDispositivos from '../MisDispositivos';
 
 function Cliente() {
   const navigate = useNavigate();
+  const { token } = useUserContext();
+  const [loading, setLoading] = useState(true);
+  const [userDevices, setUserDevices] = useState([]);
+  const [error, setError] = useState('');
+
+  // Cargar dispositivos al montar el componente
+  useEffect(() => {
+    const cargarDispositivos = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        
+        const response = await fetch('http://localhost:5000/api/dispositivos-usuario/usuario', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          setUserDevices(data.data);
+        } else {
+          setError(data.message || 'Error al cargar dispositivos');
+        }
+      } catch (err) {
+        setError('Error de conexión al cargar dispositivos');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDispositivos();
+  }, [token]);
 
   return (
     <div style={styles.fondo}>
@@ -13,6 +52,34 @@ function Cliente() {
           Administra tu cuenta, revisa el estado de tu dispensador y accede a tus pedidos recientes.
         </p>
 
+        {/* Sección de Mis Dispositivos */}
+        <div className="my-4">
+          <h3 className="mb-3">Mis Dispositivos</h3>
+          
+          {loading ? (
+            <div className="text-center my-5">
+              <Spinner animation="border" variant="primary" />
+              <p className="mt-2">Cargando tus dispositivos...</p>
+            </div>
+          ) : error ? (
+            <Alert variant="danger">{error}</Alert>
+          ) : userDevices.length === 0 ? (
+            <Alert variant="info">
+              No tienes dispensadores registrados. ¡Registra uno nuevo para comenzar!
+              <div className="mt-3">
+                <Button 
+                  variant="primary"
+                  onClick={() => navigate('/registrar-dispositivo')}
+                >
+                  Registrar Nuevo Dispensador
+                </Button>
+              </div>
+            </Alert>
+          ) : (
+            <MisDispositivos />
+          )}
+        </div>
+
         {/* Primera fila de tarjetas */}
         <Row className="mt-4 justify-content-center">
           <Col md={5} className="mb-4">
@@ -20,21 +87,27 @@ function Cliente() {
               <Card.Body style={styles.cardBody}>
                 <Card.Title style={styles.cardTitle}>Monitoreo del Dispensador</Card.Title>
                 <Card.Text>
-                  Última dispensación: <strong>Hoy a las 12:30 PM</strong>
-                  <br />
-                  Comida restante: <strong>70%</strong>
+                  {userDevices.length > 0 ? (
+                    <>
+                      Dispositivos activos: <strong>{userDevices.filter(d => d.estado?.activo).length}</strong><br />
+                      Total de dispositivos: <strong>{userDevices.length}</strong>
+                    </>
+                  ) : (
+                    "Registra tu primer dispensador para comenzar a monitorear."
+                  )}
                 </Card.Text>
                 <Button
                   variant="success"
                   style={styles.boton}
-                  onClick={() => navigate("/estado-dispensador")}
+                  onClick={() => navigate(userDevices.length > 0 ? `/Estado-Dispensador?id=${userDevices[0]?._id}` : "/registrar-dispositivo")}
                 >
-                  Ver detalles
+                  {userDevices.length > 0 ? "Ver detalles" : "Registrar dispositivo"}
                 </Button>
               </Card.Body>
             </Card>
           </Col>
 
+          {/* Resto de las tarjetas... */}
           <Col md={5} className="mb-4">
             <Card style={styles.card}>
               <Card.Body style={styles.cardBody}>
@@ -97,7 +170,7 @@ function Cliente() {
   );
 }
 
-// *🎨 Estilos actualizados*
+// Estilos actualizados
 const styles = {
   fondo: {
     backgroundColor: "#fff2db",

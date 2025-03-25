@@ -20,18 +20,31 @@ export const UserProvider = ({ children }) => {
     return null;
   });
 
-  // Función de login - guarda el usuario en el estado y en localStorage
+  // Inicializar el token desde localStorage
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token") || null;
+  });
+
+  // Función de login - guarda el usuario y token en el estado y en localStorage
   const login = (userData) => {
     console.log("Login con datos:", userData);
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
+    
+    // Guardar el token si está presente en la respuesta
+    if (userData.token) {
+      setToken(userData.token);
+      localStorage.setItem("token", userData.token);
+    }
   };
 
-  // Función de logout - elimina el usuario del estado y de localStorage
+  // Función de logout - elimina el usuario y token del estado y de localStorage
   const logout = () => {
     console.log("Logout ejecutado");
     setUser(null);
+    setToken(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   // Efecto para verificar cambios en localStorage por otras pestañas
@@ -49,6 +62,9 @@ export const UserProvider = ({ children }) => {
           setUser(null);
         }
       }
+      if (e.key === "token") {
+        setToken(e.newValue);
+      }
     };
 
     // Suscribirse al evento storage para sincronizar entre pestañas
@@ -61,7 +77,7 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, login, logout }}>
+    <UserContext.Provider value={{ user, token, login, logout }}>
       {children}
     </UserContext.Provider>
   );

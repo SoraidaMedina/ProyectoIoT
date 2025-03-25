@@ -1,10 +1,10 @@
-// models/Dispensador.js - Con nuevas colecciones
+// models/Dispensador.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// Esquema para almacenar el estado actual del dispensador (documento único)
+// Esquema para almacenar el estado actual del dispensador
 const dispensadorSchema = new Schema({
-  _id: { type: String, default: 'dispensador-principal' },
+  _id: { type: String, required: true }, // ID personalizado basado en la MAC o un ID específico
   nombre: { type: String, default: 'Dispensador Huellitas' },
   estado: {
     conectado: { type: Boolean, default: false },
@@ -42,16 +42,16 @@ const dispensadorSchema = new Schema({
     racionDiaria: { type: Number } // en gramos
   },
   propietario: {
-    id: { type: Schema.Types.ObjectId, ref: 'Usuario' },
+    id: { type: Schema.Types.ObjectId, ref: 'User' },
     nombre: { type: String },
     email: { type: String }
   },
   ultimaActualizacion: { type: Date, default: Date.now }
-}, { collection: 'dispensador_estado' }); // Nueva colección
+}, { collection: 'dispensador_estado' });
 
-// Esquema para dispensaciones (múltiples documentos para historial)
+// Esquema para dispensaciones (historial)
 const dispensacionSchema = new Schema({
-  dispensadorId: { type: String, required: true, default: 'dispensador-principal' },
+  dispensadorId: { type: String, required: true },
   tipo: { 
     type: String, 
     enum: ['manual', 'automatica', 'remota'], 
@@ -70,18 +70,18 @@ const dispensacionSchema = new Schema({
   finalizada: { type: Date },
   duracion: { type: Number }, // en segundos
   solicitadaPor: {
-    id: { type: Schema.Types.ObjectId, ref: 'Usuario' },
+    id: { type: Schema.Types.ObjectId, ref: 'User' },
     nombre: { type: String }
   },
   detalles: { type: Schema.Types.Mixed } // Para información adicional
-}, { collection: 'dispensador_historial' }); // Nueva colección para historial
+}, { collection: 'dispensador_historial' });
 
 // Esquema para alertas y notificaciones
 const alertaSchema = new Schema({
-  dispensadorId: { type: String, required: true, default: 'dispensador-principal' },
+  dispensadorId: { type: String, required: true },
   tipo: { 
     type: String, 
-    enum: ['nivel_bajo', 'error_dispensacion', 'bateria_baja', 'desconexion', 'conexion', 'actualizacion'],
+    enum: ['nivel_bajo', 'error_dispensacion', 'bateria_baja', 'desconexion', 'conexion', 'comando', 'error_sistema', 'error_dispositivo', 'actualizacion', 'info'],
     required: true 
   },
   mensaje: { type: String, required: true },
@@ -94,11 +94,11 @@ const alertaSchema = new Schema({
   leida: { type: Boolean, default: false },
   accion: { type: String }, // Acción recomendada o ejecutada
   detalles: { type: Schema.Types.Mixed }
-}, { collection: 'dispensador_alertas' }); // Nueva colección para alertas
+}, { collection: 'dispensador_alertas' });
 
 // Esquema para mantenimiento y calibración
 const mantenimientoSchema = new Schema({
-  dispensadorId: { type: String, required: true, default: 'dispensador-principal' },
+  dispensadorId: { type: String, required: true },
   tipo: { 
     type: String, 
     enum: ['calibracion', 'limpieza', 'reemplazo_bateria', 'actualizacion_firmware', 'otro'],
@@ -107,13 +107,13 @@ const mantenimientoSchema = new Schema({
   fecha: { type: Date, default: Date.now },
   realizado: { type: Boolean, default: true },
   realizadoPor: {
-    id: { type: Schema.Types.ObjectId, ref: 'Usuario' },
+    id: { type: Schema.Types.ObjectId, ref: 'User' },
     nombre: { type: String }
   },
   descripcion: { type: String },
   detalles: { type: Schema.Types.Mixed },
   proximoMantenimiento: { type: Date } // Fecha recomendada del próximo mantenimiento
-}, { collection: 'dispensador_mantenimiento' }); // Nueva colección para mantenimiento
+}, { collection: 'dispensador_mantenimiento' });
 
 // Crear modelos
 const Dispensador = mongoose.model('Dispensador', dispensadorSchema);

@@ -28,6 +28,7 @@ import PerfilPage from "./components/pages/PerfilPage";
 import RecuperarContrasena from './components/RecuperarContrasena';
 import ConfirmacionPedido from "./components/ConfirmacionPedido";
 import Dispensador from "./components/pages/Dispensador";
+import RegistrarDispositivo from "./components/pages/RegistrarDispositivo";
 
 // Importa los componentes de administración
 import AdminLayout from "./components/Admin/components/adminLayout";
@@ -119,6 +120,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PerfilPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/registrar-dispositivo"
+              element={
+                <ProtectedRoute>
+                  <RegistrarDispositivo />
                 </ProtectedRoute>
               }
             />
