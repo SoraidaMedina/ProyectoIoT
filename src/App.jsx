@@ -32,18 +32,18 @@ import RegistrarDispositivo from "./components/pages/RegistrarDispositivo";
 
 // Importa los componentes de administración
 import AdminLayout from "./components/Admin/components/adminLayout";
-import Dashboard from "./components/admin/components/Dashboard";
-import BuscarUsuario from "./components/admin/components/BuscarUsuario";
-import ListaUsuarios from "./components/admin/components/ListaUsuarios";
-import BuscarIoT from "./components/admin/components/BuscarIot";
-import ListaIots from "./components/admin/components/ListaIots";
-import ConfiguracionDatos from "./components/admin/components/ConfiguracionDatos";
+import Dashboard from "./components/Admin/components/Dashboard";
+import BuscarUsuario from "./components/Admin/components/BuscarUsuario";
+import ListaUsuarios from "./components/Admin/components/ListaUsuarios";
+import BuscarIoT from "./components/Admin/components/BuscarIot";
+import ListaIots from "./components/Admin/components/ListaIots";
+import ConfiguracionDatos from "./components/Admin/components/ConfiguracionDatos";
 import PersonalizacionPanel from "./components/Admin/components/PersonalizacionPanel";
 import HistorialActividades from "./components/Admin/components/HistorialActividades";
-import AdminCRUDUsuarios from "./components/admin/components/AdminCRUDUsuarios";
-import AdminCRUDTienda from "./components/admin/components/AdminCRUDTienda";
-import AdminCRUDPedidos from "./components/admin/components/AdminCRUDPedidos"
-import AdminCRUDPreguntas from "./components/admin/components/AdminCRUDPreguntas";
+import AdminCRUDUsuarios from "./components/Admin/components/AdminCRUDUsuarios";
+import AdminCRUDTienda from "./components/Admin/components/AdminCRUDTienda";
+import AdminCRUDPedidos from "./components/Admin/components/AdminCRUDPedidos"
+import AdminCRUDPreguntas from "./components/Admin/components/AdminCRUDPreguntas";
 
 // Importa Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
