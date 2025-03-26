@@ -2,7 +2,7 @@
 import mqtt from 'mqtt';
 
 // Usar WebSockets para conexión desde el navegador
-const MQTT_BROKER = 'ws://localhost:9001'; // Usando WebSockets para navegador
+const MQTT_BROKER = '88e521c6583143439eae9947c083c31e.s1.eu.hivemq.cloud:8883'; // Usando WebSockets para navegador
 
 // Configurar topics de MQTT
 export const TOPICS = {
